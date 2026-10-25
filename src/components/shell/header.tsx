@@ -78,7 +78,7 @@ function getPageMeta(pathname: string): PageMeta {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { backendStatus, isLoading } = useComplaints();
+  const { backendStatus, isLoading, currentOfficer } = useComplaints();
   const [searchQuery, setSearchQuery] = useState("");
   const meta = getPageMeta(pathname);
 
@@ -172,10 +172,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
           <div className="hidden xl:block text-left">
             <span className="block text-xs font-bold text-[#172033] leading-none">
-              Dr. S. K. Rao
+              {currentOfficer?.name || "Dr. S. K. Rao"}
             </span>
             <span className="block text-[10px] font-medium text-[#697386] leading-none mt-1">
-              Apex Scrutiny Cell
+              {currentOfficer?.bureau?.name || (currentOfficer?.role === "CENTRAL_ADMIN" ? "Central Administration" : "Apex Scrutiny Cell")}
             </span>
           </div>
         </div>

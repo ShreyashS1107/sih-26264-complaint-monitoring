@@ -62,6 +62,16 @@ export class ApiError extends Error {
 // 2. Base Fetch Helper with Timeout & Envelope Parsing
 // ==============================================================================
 
+let activeAuthToken: string | null = null;
+
+export function setClientAuthToken(token: string | null) {
+  activeAuthToken = token;
+}
+
+export function getClientAuthToken(): string | null {
+  return activeAuthToken;
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -70,10 +80,14 @@ async function fetchApi<T>(
   if (!headers.has('Content-Type') && options.method && options.method !== 'GET') {
     headers.set('Content-Type', 'application/json');
   }
+  if (activeAuthToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${activeAuthToken}`);
+  }
 
   let response: Response;
   try {
     response = await fetch(endpoint, {
+      credentials: 'include',
       ...options,
       headers,
     });
@@ -526,5 +540,40 @@ export const apiClient = {
     }));
 
     return { logs, total: res.pagination?.total ?? logs.length };
+  },
+
+  /**
+   * Authenticate officer session with credentials
+   */
+  async login(badgeNumber: string, email?: string): Promise<{ token: string; officer: any }> {
+    const res = await fetchApi<{ token: string; officer: any }>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ badgeNumber, email }),
+    });
+    setClientAuthToken(res.token);
+    return res;
+  },
+
+  /**
+   * Retrieve current authenticated officer from server
+   */
+  async getCurrentOfficer(): Promise<{ officer: any }> {
+    return fetchApi<{ officer: any }>('/api/v1/auth/me');
+  },
+
+  /**
+   * Terminate current officer session
+   */
+  async logout(): Promise<void> {
+    await fetchApi<{ message: string }>('/api/v1/auth/logout', { method: 'POST' });
+    setClientAuthToken(null);
+  },
+
+  /**
+   * List available institutional officers for verification
+   */
+  async getOfficers(): Promise<Array<{ id: string; badgeNumber: string; name: string; role: string; bureau: any }>> {
+    const res = await fetchApi<{ officers: any[] }>('/api/v1/auth/officers');
+    return res.officers;
   },
 };

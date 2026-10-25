@@ -55,6 +55,9 @@ interface ComplaintContextType {
     note: string,
     officerName?: string
   ) => Promise<boolean>;
+  currentOfficer: any | null;
+  switchOfficer: (badgeNumber: string, email?: string) => Promise<boolean>;
+  logoutOfficer: () => Promise<void>;
   getComplaint: (id: string) => Complaint | undefined;
   getOverlap: (id: string) => OverlapCandidate | undefined;
   getOverlapsForComplaint: (complaintId: string) => OverlapCandidate[];
@@ -74,6 +77,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  const [currentOfficer, setCurrentOfficer] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [actionError, setActionError] = useState<ActionErrorState | null>(null);
 
@@ -103,7 +107,26 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (health.database === "connected") {
         setBackendStatus("connected");
 
-        // 2. Fetch live data concurrently
+        // 2. Resolve or establish active officer session
+        try {
+          const me = await apiClient.getCurrentOfficer();
+          if (me?.officer) {
+            setCurrentOfficer(me.officer);
+          }
+        } catch {
+          if (process.env.NODE_ENV !== "production") {
+            try {
+              const res = await apiClient.login("OFF-AICTE-000", "dr.sk.rao@demo.aicte.internal");
+              if (res?.officer) {
+                setCurrentOfficer(res.officer);
+              }
+            } catch {
+              // Ignore failure
+            }
+          }
+        }
+
+        // 3. Fetch live data concurrently
         const [complaintsRes, overlapsRes, summaryRes, auditRes] = await Promise.allSettled([
           apiClient.getComplaints({ limit: 50 }),
           apiClient.getOverlapCandidates({ limit: 50 }),
@@ -367,6 +390,27 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [overlaps]
   );
 
+  const switchOfficer = useCallback(async (badgeNumber: string, email?: string): Promise<boolean> => {
+    try {
+      const res = await apiClient.login(badgeNumber, email);
+      if (res?.officer) {
+        setCurrentOfficer(res.officer);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const logoutOfficer = useCallback(async () => {
+    try {
+      await apiClient.logout();
+    } finally {
+      setCurrentOfficer(null);
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       complaints,
@@ -382,6 +426,9 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       syncError,
       actionError,
       isSubmitting,
+      currentOfficer,
+      switchOfficer,
+      logoutOfficer,
       clearActionError,
       refreshData,
       updateComplaintStatus,
@@ -404,6 +451,9 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       syncError,
       actionError,
       isSubmitting,
+      currentOfficer,
+      switchOfficer,
+      logoutOfficer,
       clearActionError,
       refreshData,
       updateComplaintStatus,

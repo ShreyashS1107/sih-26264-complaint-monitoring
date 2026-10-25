@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: 'node',
+      fileParallelism: false,
       include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
       env,
     },

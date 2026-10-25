@@ -66,6 +66,19 @@ async function main() {
   });
 
   // 2. Seed Officers (Strictly synthetic demonstration data)
+  const _officerAdmin = await prisma.officer.upsert({
+    where: { badgeNumber: 'OFF-AICTE-000' },
+    update: {},
+    create: {
+      badgeNumber: 'OFF-AICTE-000',
+      name: 'Dr. S. K. Rao (Central Admin)',
+      email: 'dr.sk.rao@demo.aicte.internal',
+      bureauId: approvalBureau.id,
+      role: 'CENTRAL_ADMIN',
+      isActive: true,
+    },
+  });
+
   const officerAlpha = await prisma.officer.upsert({
     where: { badgeNumber: 'OFF-AICTE-001' },
     update: {},
