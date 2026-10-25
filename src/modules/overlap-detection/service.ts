@@ -2,6 +2,7 @@ import { db } from '@/server/db';
 import {
   type ComplaintInput,
   type OverlapEvaluationResult,
+  OVERLAP_THRESHOLDS,
   scanForOverlapCandidates,
 } from './engine';
 import { type OverlapCandidateRecord, overlapCandidateRecordSchema } from './schema';
@@ -44,6 +45,7 @@ export interface OverlapSyncResult {
 /**
  * Service to analyze, detect, and persist overlap candidates for a given complaint.
  * Ensures complaints are NEVER automatically merged, modified, or deleted.
+ * Preserves human review decisions (CONFIRMED_OVERLAP / DISMISSED_INDEPENDENT) during rescoring.
  */
 export async function analyzeAndPersistOverlaps(
   targetComplaintId: string,
@@ -54,7 +56,7 @@ export async function analyzeAndPersistOverlaps(
   } = {}
 ): Promise<OverlapSyncResult> {
   const client = (options.prisma ?? db) as PrismaClient;
-  const threshold = options.threshold ?? 0.5;
+  const threshold = options.threshold ?? OVERLAP_THRESHOLDS.MODERATE_CLUSTER;
   const windowDays = options.temporalWindowDays ?? 365;
 
   // 1. Fetch target complaint with related institution and bureau
@@ -73,19 +75,31 @@ export async function analyzeAndPersistOverlaps(
   const targetInput = mapPrismaComplaintToInput(target);
 
   // 2. Fetch candidate pool: Active complaints within temporal window
+  // Deterministic candidate pool selection:
+  // Symmetric temporal window around target complaint date
   const windowStartDate = new Date(
     new Date(target.createdAt).getTime() - windowDays * 24 * 60 * 60 * 1000
   );
+  const windowEndDate = new Date(
+    new Date(target.createdAt).getTime() + windowDays * 24 * 60 * 60 * 1000
+  );
 
+  // Candidate pool capped at 200 records per scan with deterministic ordering
+  // Primary order: Most recently created first
+  // Tie-breaker: Unique complaint ID ascending
   const rawPool = await client.complaint.findMany({
     where: {
       id: { not: targetComplaintId },
-      createdAt: { gte: windowStartDate },
+      createdAt: {
+        gte: windowStartDate,
+        lte: windowEndDate,
+      },
     },
     include: {
       institution: true,
       bureau: true,
     },
+    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     take: 200,
   });
 
@@ -95,38 +109,117 @@ export async function analyzeAndPersistOverlaps(
   const candidateResults = scanForOverlapCandidates(targetInput, poolInputs, threshold);
 
   // 4. Persist candidates using idempotent upserts with canonical keying
+  // Wrapped in transaction with row locking and conditional update to safely preserve human review decisions
   for (const result of candidateResults) {
     // Validate record schema before saving
     overlapCandidateRecordSchema.parse(result);
 
-    await client.overlapCandidate.upsert({
-      where: {
-        primaryComplaintId_candidateComplaintId: {
-          primaryComplaintId: result.primaryComplaintId,
-          candidateComplaintId: result.candidateComplaintId,
-        },
-      },
-      update: {
-        overallScore: result.overallScore,
-        entityScore: result.entityScore,
-        subjectScore: result.subjectScore,
-        complainantScore: result.complainantScore,
-        temporalScore: result.temporalScore,
-        matchingSignals: result.matchingSignals as any,
-        reviewStatus: result.reviewStatus,
-      },
-      create: {
-        primaryComplaintId: result.primaryComplaintId,
-        candidateComplaintId: result.candidateComplaintId,
-        institutionId: result.institutionId,
-        overallScore: result.overallScore,
-        entityScore: result.entityScore,
-        subjectScore: result.subjectScore,
-        complainantScore: result.complainantScore,
-        temporalScore: result.temporalScore,
-        matchingSignals: result.matchingSignals as any,
-        reviewStatus: result.reviewStatus,
-      },
+    await client.$transaction(async (tx) => {
+      // 1. Acquire row-level lock on existing candidate in PostgreSQL to serialize concurrent transactions
+      const lockedRows = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "OverlapCandidate"
+        WHERE "primaryComplaintId" = ${result.primaryComplaintId}
+          AND "candidateComplaintId" = ${result.candidateComplaintId}
+        FOR UPDATE
+      `;
+
+      if (lockedRows.length > 0) {
+        // Candidate already exists.
+        // Step A: Rescoring ALWAYS updates similarity scores and matching evidence
+        await tx.overlapCandidate.update({
+          where: {
+            primaryComplaintId_candidateComplaintId: {
+              primaryComplaintId: result.primaryComplaintId,
+              candidateComplaintId: result.candidateComplaintId,
+            },
+          },
+          data: {
+            overallScore: result.overallScore,
+            entityScore: result.entityScore,
+            subjectScore: result.subjectScore,
+            complainantScore: result.complainantScore,
+            temporalScore: result.temporalScore,
+            matchingSignals: result.matchingSignals as any,
+          },
+        });
+
+        // Step B: Conditionally update reviewStatus ONLY IF the candidate has NOT been human-reviewed.
+        // Even under concurrent transactions, an officer's CONFIRMED_OVERLAP or DISMISSED_INDEPENDENT
+        // decision, or any candidate with assigned reviewer/timestamps/notes, is NEVER overwritten.
+        await tx.overlapCandidate.updateMany({
+          where: {
+            primaryComplaintId: result.primaryComplaintId,
+            candidateComplaintId: result.candidateComplaintId,
+            reviewStatus: { notIn: ['CONFIRMED_OVERLAP', 'DISMISSED_INDEPENDENT'] },
+            reviewedById: null,
+            reviewedAt: null,
+            reviewNotes: null,
+          },
+          data: {
+            reviewStatus: result.reviewStatus,
+          },
+        });
+      } else {
+        // Candidate does not exist yet; create with initial engine recommendation status
+        try {
+          await tx.overlapCandidate.create({
+            data: {
+              primaryComplaintId: result.primaryComplaintId,
+              candidateComplaintId: result.candidateComplaintId,
+              institutionId: result.institutionId,
+              overallScore: result.overallScore,
+              entityScore: result.entityScore,
+              subjectScore: result.subjectScore,
+              complainantScore: result.complainantScore,
+              temporalScore: result.temporalScore,
+              matchingSignals: result.matchingSignals as any,
+              reviewStatus: result.reviewStatus,
+            },
+          });
+        } catch (createError: unknown) {
+          // If a concurrent process created this candidate first (P2002 unique constraint violation)
+          const isUniqueConstraint =
+            typeof createError === 'object' &&
+            createError !== null &&
+            'code' in createError &&
+            (createError as { code: string }).code === 'P2002';
+
+          if (isUniqueConstraint) {
+            await tx.overlapCandidate.update({
+              where: {
+                primaryComplaintId_candidateComplaintId: {
+                  primaryComplaintId: result.primaryComplaintId,
+                  candidateComplaintId: result.candidateComplaintId,
+                },
+              },
+              data: {
+                overallScore: result.overallScore,
+                entityScore: result.entityScore,
+                subjectScore: result.subjectScore,
+                complainantScore: result.complainantScore,
+                temporalScore: result.temporalScore,
+                matchingSignals: result.matchingSignals as any,
+              },
+            });
+
+            await tx.overlapCandidate.updateMany({
+              where: {
+                primaryComplaintId: result.primaryComplaintId,
+                candidateComplaintId: result.candidateComplaintId,
+                reviewStatus: { notIn: ['CONFIRMED_OVERLAP', 'DISMISSED_INDEPENDENT'] },
+                reviewedById: null,
+                reviewedAt: null,
+                reviewNotes: null,
+              },
+              data: {
+                reviewStatus: result.reviewStatus,
+              },
+            });
+          } else {
+            throw createError;
+          }
+        }
+      }
     });
   }
 

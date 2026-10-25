@@ -23,16 +23,16 @@ describe('AICTE Permanent Institute ID Validation', () => {
   });
 });
 
-describe('Overlap Detection Candidate Schema & Integrity Rules', () => {
-  const validCandidate: OverlapCandidate = {
-    primaryComplaintId: 'CMP-2026-001',
-    candidateComplaintId: 'CMP-2026-042',
-    institutionId: '1-12345678',
-    similarityScore: 0.87,
-    bureaus: ['approval_bureau', 'vigilance_bureau'],
-    status: 'pending_review',
-  };
+const validCandidate: OverlapCandidate = {
+  primaryComplaintId: 'CMP-2026-001',
+  candidateComplaintId: 'CMP-2026-042',
+  institutionId: '1-12345678',
+  similarityScore: 0.87,
+  bureaus: ['APPROVAL_BUREAU', 'VIGILANCE_BUREAU'],
+  status: 'pending_review',
+};
 
+describe('Overlap Detection Candidate Schema & Integrity Rules', () => {
   it('should validate a correctly structured overlap candidate', () => {
     const result = overlapCandidateSchema.safeParse(validCandidate);
     expect(result.success).toBe(true);
@@ -59,11 +59,11 @@ describe('Overlap Detection Candidate Schema & Integrity Rules', () => {
   it('should reject candidates with invalid bureau count or invalid bureau name', () => {
     const singleBureau = {
       ...validCandidate,
-      bureaus: ['approval_bureau'],
+      bureaus: ['APPROVAL_BUREAU'] as any,
     };
     const invalidBureau = {
       ...validCandidate,
-      bureaus: ['approval_bureau', 'unsupported_cell'],
+      bureaus: ['APPROVAL_BUREAU', 'unsupported_cell'] as any,
     };
 
     expect(overlapCandidateSchema.safeParse(singleBureau).success).toBe(false);
@@ -110,6 +110,41 @@ describe('Detailed Overlap Candidate Database Record Validation', () => {
   it('should validate a complete explainable candidate record', () => {
     const result = overlapCandidateRecordSchema.safeParse(validRecord);
     expect(result.success).toBe(true);
+  });
+
+  it('should validate candidate record with null daysApart when dates are unverified', () => {
+    const recordWithNullDays = {
+      ...validRecord,
+      matchingSignals: {
+        ...validRecord.matchingSignals,
+        daysApart: null,
+        explanation: 'Both complaints report unauthorized fee levies with unverified dates.',
+      },
+    };
+    const result = overlapCandidateRecordSchema.safeParse(recordWithNullDays);
+    expect(result.success).toBe(true);
+  });
+
+  it('should validate canonical uppercase bureau codes and transform lowercase codes', () => {
+    const uppercaseCandidate = {
+      ...validCandidate,
+      bureaus: ['APPROVAL_BUREAU', 'VIGILANCE_BUREAU'],
+    };
+    const result = overlapCandidateSchema.safeParse(uppercaseCandidate);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.bureaus).toEqual(['APPROVAL_BUREAU', 'VIGILANCE_BUREAU']);
+    }
+
+    const lowercaseCandidate = {
+      ...validCandidate,
+      bureaus: ['approval_bureau', 'vigilance_bureau'],
+    };
+    const resultLower = overlapCandidateSchema.safeParse(lowercaseCandidate);
+    expect(resultLower.success).toBe(true);
+    if (resultLower.success) {
+      expect(resultLower.data.bureaus).toEqual(['APPROVAL_BUREAU', 'VIGILANCE_BUREAU']);
+    }
   });
 
   it('should reject candidate record when explanation is missing or too short', () => {

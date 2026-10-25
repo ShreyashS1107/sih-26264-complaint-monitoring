@@ -87,11 +87,14 @@ $$\sum w_i = 0.35 + 0.40 + 0.15 + 0.10 = 1.00$$
 ### 3.5. Persistence & Query Service (`service.ts`)
 - `analyzeAndPersistOverlaps(targetComplaintId, options)`:
   - Fetches target complaint with institution and bureau relations.
-  - Queries active candidate pool within temporal window (default 365 days).
-  - Runs pure `scanForOverlapCandidates`.
+  - Queries active candidate pool within a symmetric temporal window (`[-windowDays, +windowDays]`, default 365 days) with deterministic ordering (`createdAt desc, id asc`).
+  - Limits pool to 200 complaints per scan, prioritizing the most recent filings with an unambiguous primary key tie-breaker.
+  - Runs pure `scanForOverlapCandidates` using `OVERLAP_THRESHOLDS.MODERATE_CLUSTER` (`0.45`) as default threshold.
   - Validates results through Zod `overlapCandidateRecordSchema`.
-  - Idempotently upserts into PostgreSQL table `OverlapCandidate`.
-  - **Zero data loss guarantee:** Never updates, merges, or deletes any `Complaint` row.
+  - Atomically updates PostgreSQL `OverlapCandidate` records inside Prisma `$transaction`:
+    - **Concurrency-Safe Human Decision Preservation:** Candidate records are managed inside an atomic `$transaction` with PostgreSQL row-level locking (`SELECT ... FOR UPDATE`) and a conditional update WHERE-clause. Similarity scores and matching evidence are always updated, but an officer's human review decisions (`CONFIRMED_OVERLAP`, `DISMISSED_INDEPENDENT`, `reviewedById`, `reviewedAt`, `reviewNotes`) cannot be overwritten even under concurrent rescoring.
+    - **Zero Data Loss Guarantee:** Never updates, merges, or deletes any `Complaint` row.
+    - **Non-Destructive Integration Testing:** Integration tests isolate mutations strictly to the specific candidate pair under test via snapshot capture and targeted restore hooks, ensuring zero interference with unrelated candidates or existing officer decisions.
 - `getOverlapCandidatesForComplaint(complaintId)`:
   - Retrieves persisted candidates with full relation graphs (`primaryComplaint`, `candidateComplaint`, `bureau`, `institution`, `reviewedBy`).
 
@@ -101,33 +104,32 @@ $$\sum w_i = 0.35 + 0.40 + 0.15 + 0.10 = 1.00$$
 
 The entire engine and service have been verified against both pure in-memory scenarios and the live PostgreSQL database (`sih26264_dev`).
 
-### Test Coverage Summary: 50 / 50 Passing Tests
+### Test Coverage Summary: 59 / 59 Passing Tests
 
 ```
  ✓ tests/unit/institution-schema.test.ts (4 tests)
  ✓ tests/unit/complaint-schema.test.ts (4 tests)
- ✓ tests/unit/overlap-detection.test.ts (10 tests)
- ✓ tests/unit/overlap-engine.test.ts (24 tests)
-   ✓ Text Normalization and Lexical Tokenizer (6 tests)
+ ✓ tests/unit/overlap-detection.test.ts (12 tests)
+   ✓ AICTE Permanent Institute ID Validation (4 tests)
+   ✓ Overlap Detection Candidate Schema & Integrity Rules (5 tests)
+   ✓ Detailed Overlap Candidate Database Record Validation (3 tests)
+ ✓ tests/unit/overlap-engine.test.ts (28 tests)
+   ✓ Text Normalization and Lexical Tokenizer (8 tests)
    ✓ Institution Identity Resolution Engine (6 tests)
-   ✓ Temporal Proximity Scorer (4 tests)
+   ✓ Temporal Proximity Scorer (6 tests)
    ✓ Pure Explainable Overlap Engine Scenarios (7 tests)
-     ✓ Scenario 1: Direct Duplicate Multi-Filing across bureaus (Score: ~0.92, HIGH, DIRECT_DUPLICATE)
-     ✓ Scenario 2: Coordinated Filing by different complainants (Score: ~0.66, HIGH, COORDINATED_FILING)
-     ✓ Scenario 3: Symptomatic Grievance Cluster (Score: ~0.47, MEDIUM, SYMPTOMATIC_CLUSTER)
-     ✓ Scenario 4: Independent Grievances at Same Institution (Hostel ragging vs Salary delay) (Score: ~0.38, LOW, INDEPENDENT)
-     ✓ Scenario 5: Distinct Institutions with identical text (Score: 0.00, LOW, INDEPENDENT)
-     ✓ Scenario 6: Commutative evaluation invariant (Forward == Reverse)
-     ✓ Scenario 7: Self-match rejection invariant
    ✓ scanForOverlapCandidates Utility (1 test)
  ✓ tests/integration/database.test.ts (5 tests)
    ✓ PostgreSQL connection and seed verification
    ✓ OverlapCandidate canonical order DB constraint check
    ✓ OverlapCandidate score bounds DB constraint check
- ✓ tests/integration/overlap-service.test.ts (3 tests)
+ ✓ tests/integration/overlap-service.test.ts (6 tests)
    ✓ analyzeAndPersistOverlaps persists valid reviewable records
    ✓ Non-destructive guarantee: complaints are never auto-merged, altered, or deleted
-   ✓ getOverlapCandidatesForComplaint returns candidate relations
+   ✓ Default threshold (0.45) retention between 0.45 and 0.50
+   ✓ CONFIRMED_OVERLAP preservation across repeated rescoring
+   ✓ DISMISSED_INDEPENDENT preservation across repeated rescoring
+   ✓ Concurrency-safe human decision protection against concurrent automated rescoring
 ```
 
 ---

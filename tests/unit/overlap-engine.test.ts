@@ -23,6 +23,7 @@ import {
 import {
   calculateDaysApart,
   evaluateTemporalProximity,
+  NEUTRAL_TEMPORAL_SCORE,
 } from '@/modules/overlap-detection/temporal';
 
 describe('Text Normalization and Lexical Tokenizer', () => {
@@ -81,6 +82,66 @@ describe('Text Normalization and Lexical Tokenizer', () => {
     const shared = extractSharedKeywords(textA, textB);
     expect(shared).toContain('unapproved fee');
     expect(shared).toContain('caution deposit');
+  });
+
+  it('should not award phantom similarity bonuses when complaint descriptions are empty or short', () => {
+    const compA: ComplaintInput = {
+      id: 'cmp_short_a',
+      complaintNumber: 'CMP-2026-SHORT-A',
+      originalBureauRef: 'REF-01',
+      bureauId: 'bur-1',
+      institutionId: 'inst-1',
+      institution: { permanentId: '1-10098765', name: 'Matrix Inst' },
+      subject: 'Lab issue',
+      description: '',
+      category: 'INFRASTRUCTURE',
+      createdAt: '2026-03-01',
+    };
+    const compB: ComplaintInput = {
+      id: 'cmp_short_b',
+      complaintNumber: 'CMP-2026-SHORT-B',
+      originalBureauRef: 'REF-02',
+      bureauId: 'bur-2',
+      institutionId: 'inst-1',
+      institution: { permanentId: '1-10098765', name: 'Matrix Inst' },
+      subject: 'Library problem',
+      description: '',
+      category: 'FACULTY_NON_COMPLIANCE',
+      createdAt: '2026-03-01',
+    };
+
+    const { score } = evaluateSubjectSimilarity(compA, compB);
+    // Since 'lab issue' vs 'library problem' share zero unigrams and zero bigrams,
+    // score must be 0.0 with no bigram phantom bonus (+0.15)
+    expect(score).toBe(0.0);
+  });
+
+  it('should evaluate completely empty texts to zero similarity', () => {
+    const compEmptyA: ComplaintInput = {
+      id: 'cmp_emp_a',
+      complaintNumber: 'CMP-EMPTY-A',
+      originalBureauRef: 'REF-E1',
+      bureauId: 'bur-1',
+      institutionId: 'inst-1',
+      institution: { permanentId: '1-10098765', name: 'Matrix Inst' },
+      subject: '',
+      description: '',
+      createdAt: '2026-03-01',
+    };
+    const compEmptyB: ComplaintInput = {
+      id: 'cmp_emp_b',
+      complaintNumber: 'CMP-EMPTY-B',
+      originalBureauRef: 'REF-E2',
+      bureauId: 'bur-2',
+      institutionId: 'inst-1',
+      institution: { permanentId: '1-10098765', name: 'Matrix Inst' },
+      subject: '',
+      description: '',
+      createdAt: '2026-03-01',
+    };
+
+    const { score } = evaluateSubjectSimilarity(compEmptyA, compEmptyB);
+    expect(score).toBe(0.0);
   });
 });
 
@@ -197,6 +258,39 @@ describe('Temporal Proximity Scorer', () => {
     const resDistant = evaluateTemporalProximity('2024-01-01', '2026-03-01');
     expect(resDistant.score).toBe(0.05);
     expect(resDistant.explanation).toContain('Low temporal proximity');
+  });
+
+  it('should return null daysApart and neutral default score for invalid or missing dates', () => {
+    const resInvalidStr = evaluateTemporalProximity('not-a-date', '2026-03-01');
+    expect(resInvalidStr.daysApart).toBeNull();
+    expect(resInvalidStr.score).toBe(NEUTRAL_TEMPORAL_SCORE);
+    expect(resInvalidStr.isDateComparable).toBe(false);
+    expect(resInvalidStr.explanation).toContain('unverified or unparseable');
+
+    const resNull = evaluateTemporalProximity(null, '2026-03-01');
+    expect(resNull.daysApart).toBeNull();
+    expect(resNull.score).toBe(NEUTRAL_TEMPORAL_SCORE);
+    expect(resNull.isDateComparable).toBe(false);
+
+    expect(calculateDaysApart('invalid-date', '2026-03-01')).toBeNull();
+    expect(calculateDaysApart(undefined, '2026-03-01')).toBeNull();
+  });
+
+  it('should calculate days apart accurately across Date objects and timezone boundaries', () => {
+    // Exact same timestamp across timezones
+    const dateIST = new Date('2026-03-01T23:30:00+05:30');
+    const dateUTC = new Date('2026-03-01T18:00:00Z');
+    expect(calculateDaysApart(dateIST, dateUTC)).toBe(0);
+
+    // Midnight boundary: 23:59:00 UTC vs 00:05:00 UTC next day (6 minutes elapsed)
+    const midnightBefore = new Date('2026-03-01T23:59:00Z');
+    const midnightAfter = new Date('2026-03-02T00:05:00Z');
+    expect(calculateDaysApart(midnightBefore, midnightAfter)).toBe(0);
+
+    // Full 24-hour interval
+    const day1 = new Date('2026-03-01T10:00:00Z');
+    const day2 = new Date('2026-03-02T10:00:00Z');
+    expect(calculateDaysApart(day1, day2)).toBe(1);
   });
 });
 

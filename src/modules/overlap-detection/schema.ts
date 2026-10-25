@@ -14,16 +14,23 @@ export const aictePermanentIdSchema = z
 /**
  * Supported AICTE Bureaus and Special Cells
  */
-export const aicteBureauSchema = z.enum([
-  'approval_bureau',
-  'anti_ragging_cell',
-  'student_grievance_cell',
-  'faculty_grievance_cell',
-  'vigilance_bureau',
-  'regional_office',
-]);
+export const CANONICAL_AICTE_BUREAUS = [
+  'APPROVAL_BUREAU',
+  'ANTI_RAGGING_CELL',
+  'STUDENT_GRIEVANCE_CELL',
+  'FACULTY_GRIEVANCE_CELL',
+  'VIGILANCE_BUREAU',
+  'REGIONAL_OFFICE',
+] as const;
 
-export type AicteBureau = z.infer<typeof aicteBureauSchema>;
+export const aicteBureauCodeSchema = z.enum(CANONICAL_AICTE_BUREAUS);
+
+export const aicteBureauSchema = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+  aicteBureauCodeSchema
+);
+
+export type AicteBureau = z.infer<typeof aicteBureauCodeSchema>;
 
 export const overlapReviewStatusSchema = z.enum([
   'PENDING_REVIEW',
@@ -91,9 +98,14 @@ export const overlapCandidateRecordSchema = z
     temporalScore: z.number().min(0.0).max(1.0),
     matchingSignals: z.object({
       commonKeywords: z.array(z.string()).default([]),
-      daysApart: z.number().nonnegative(),
-      involvedBureaus: z.array(z.string()).default([]),
+      daysApart: z.number().nonnegative().nullable(),
+      involvedBureaus: z.array(aicteBureauSchema).default([]),
       explanation: z.string().min(5, 'Matching explanation must be provided'),
+      entityMatchReason: z.string().optional(),
+      temporalExplanation: z.string().optional(),
+      recommendation: z.string().optional(),
+      overlapType: z.string().optional(),
+      severity: z.string().optional(),
     }),
     reviewStatus: overlapReviewStatusSchema.default('PENDING_REVIEW'),
     reviewNotes: z.string().optional(),

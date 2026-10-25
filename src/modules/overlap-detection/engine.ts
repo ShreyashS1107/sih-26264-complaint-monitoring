@@ -33,7 +33,7 @@ export type OverlapClassification =
 
 export interface OverlapMatchingSignals {
   commonKeywords: string[];
-  daysApart: number;
+  daysApart: number | null;
   involvedBureaus: string[];
   entityMatchReason: string;
   temporalExplanation: string;
@@ -122,18 +122,23 @@ export function evaluateSubjectSimilarity(
   const fullTokensB = extractTokens(fullTextB);
   const fullCosine = calculateCosineSimilarity(fullTokensA.stems, fullTokensB.stems);
 
-  // 3. Evaluate shared compound phrase bigrams
-  const bigramJaccard = calculateJaccardSimilarity(fullTokensA.bigrams, fullTokensB.bigrams);
+  // 3. Evaluate shared compound phrase bigrams (guarded so empty sets never yield phantom similarity)
+  const bigramJaccard =
+    fullTokensA.bigrams.length > 0 && fullTokensB.bigrams.length > 0
+      ? calculateJaccardSimilarity(fullTokensA.bigrams, fullTokensB.bigrams)
+      : 0.0;
 
   // Composite subject score: 40% subject headline, 45% full narrative, 15% phrase overlap
   let rawScore = subjectCosine * 0.4 + fullCosine * 0.45 + bigramJaccard * 0.15;
   rawScore = Math.max(rawScore, fullCosine * 0.85 + bigramJaccard * 0.15);
 
   // Category congruence bonus/penalty:
-  // Concordant category strengthens topic relevance, conflicting category dampens it.
+  // Concordant category strengthens topic relevance (only if lexical overlap exists), conflicting category dampens it.
   if (compA.category && compB.category) {
     if (compA.category === compB.category) {
-      rawScore = Math.min(1.0, rawScore * 1.15 + 0.05);
+      if (rawScore > 0) {
+        rawScore = Math.min(1.0, rawScore * 1.15 + 0.05);
+      }
     } else {
       rawScore = rawScore * 0.6;
     }
@@ -219,22 +224,32 @@ export function evaluateComplaintPair(
     severity = 'HIGH';
     recommendation = 'FLAG_FOR_JOINT_REVIEW';
 
+    const timeWindowText =
+      temporalResult.daysApart !== null
+        ? `within ${temporalResult.daysApart} day(s)`
+        : 'with unverified filing interval';
+
     if (isDirectComplainantMatch) {
       overlapType = 'DIRECT_DUPLICATE';
-      explanation = `High confidence direct duplicate (${Math.round(overallScore * 100)}%): Identical complainant multi-filed against ${instName} across ${involvedBureaus.join(' and ')} within ${temporalResult.daysApart} day(s).`;
+      explanation = `High confidence direct duplicate (${Math.round(overallScore * 100)}%): Identical complainant multi-filed against ${instName} across ${involvedBureaus.join(' and ')} ${timeWindowText}.`;
     } else {
       overlapType = 'COORDINATED_FILING';
-      explanation = `High confidence coordinated filing (${Math.round(overallScore * 100)}%): Similar grievances alleging ${commonKeywords.slice(0, 3).join(', ') || 'related non-compliance'} against ${instName} submitted across ${involvedBureaus.join(' and ')} within ${temporalResult.daysApart} day(s).`;
+      explanation = `High confidence coordinated filing (${Math.round(overallScore * 100)}%): Similar grievances alleging ${commonKeywords.slice(0, 3).join(', ') || 'related non-compliance'} against ${instName} submitted across ${involvedBureaus.join(' and ')} ${timeWindowText}.`;
     }
   } else if (
     overallScore >= OVERLAP_THRESHOLDS.MODERATE_CLUSTER &&
     entityScore >= 0.75 &&
     subjectScore >= 0.25
   ) {
+    const timeWindowText =
+      temporalResult.daysApart !== null
+        ? `within ${temporalResult.daysApart} day(s)`
+        : 'with unverified filing interval';
+
     severity = 'MEDIUM';
     recommendation = 'MONITOR_SYMPTOMATIC_CLUSTER';
     overlapType = 'SYMPTOMATIC_CLUSTER';
-    explanation = `Symptomatic grievance cluster (${Math.round(overallScore * 100)}%): Multiple filings with overlapping themes (${commonKeywords.slice(0, 3).join(', ') || 'institutional governance'}) targeting ${instName} within ${temporalResult.daysApart} day(s).`;
+    explanation = `Symptomatic grievance cluster (${Math.round(overallScore * 100)}%): Multiple filings with overlapping themes (${commonKeywords.slice(0, 3).join(', ') || 'institutional governance'}) targeting ${instName} ${timeWindowText}.`;
   } else {
     severity = 'LOW';
     recommendation = 'INDEPENDENT_CASE';
