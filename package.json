@@ -1,0 +1,23 @@
+{
+  "name": "sih-26264-complaint-monitoring",
+  "version": "0.1.0",
+  "description": "Integrated Dashboard for Monitoring and Tracking Institution-Related Complaint Cases Across AICTE Bureaus/Cells (SIH 26264)",
+  "private": true,
+  "author": "Matrix Maya",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "echo \"Phase 1: Application dependencies not installed yet. Dev server will be configured in Phase 2.\" && exit 1",
+    "build": "echo \"Phase 1: Build pipeline will be established in future phases.\" && exit 1",
+    "start": "echo \"Phase 1: Production runtime will be established in future phases.\" && exit 1",
+    "lint": "echo \"Phase 1: ESLint will be configured in Phase 2.\" && exit 0",
+    "test": "echo \"Phase 1: Vitest runner will be configured in Phase 2.\" && exit 0"
+  },
+  "keywords": [
+    "aicte",
+    "sih-26264",
+    "complaint-monitoring",
+    "cross-bureau-tracking",
+    "overlap-detection",
+    "matrix-maya"
+  ]
+}
