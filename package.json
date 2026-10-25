@@ -6,11 +6,15 @@
   "author": "Matrix Maya",
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "echo \"Phase 1: Application dependencies not installed yet. Dev server will be configured in Phase 2.\" && exit 1",
-    "build": "echo \"Phase 1: Build pipeline will be established in future phases.\" && exit 1",
-    "start": "echo \"Phase 1: Production runtime will be established in future phases.\" && exit 1",
-    "lint": "echo \"Phase 1: ESLint will be configured in Phase 2.\" && exit 0",
-    "test": "echo \"Phase 1: Vitest runner will be configured in Phase 2.\" && exit 0"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "keywords": [
     "aicte",
@@ -19,5 +23,21 @@
     "cross-bureau-tracking",
     "overlap-detection",
     "matrix-maya"
-  ]
+  ],
+  "dependencies": {
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.3",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
 }

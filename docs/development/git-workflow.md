@@ -2,7 +2,7 @@
 
 **Project:** Integrated Dashboard for Monitoring and Tracking Institution-Related Complaint Cases Across AICTE Bureaus/Cells  
 **Problem Statement ID:** SIH 26264  
-**Team:** Matrix Maya  
+**Team:** Matrix Maya
 
 ---
 
@@ -23,14 +23,14 @@ To ensure collaboration remains clean, traceable, and conflict-free across all t
 
 All branch names must follow the format `<type>/<short-kebab-description>`:
 
-| Branch Prefix | Purpose | Example |
-| :--- | :--- | :--- |
-| `feat/` | New module, feature, or engine capability | `feat/overlap-scoring-algorithm` |
-| `fix/` | Bug fixes and defect resolutions | `fix/institution-id-normalization` |
-| `docs/` | Documentation additions or updates | `docs/architecture-diagram-update` |
-| `refactor/` | Code refactoring without behavioral change | `refactor/modularize-bureau-adapters` |
-| `test/` | Adding or updating unit/integration tests | `test/add-overlap-engine-fixtures` |
-| `chore/` | Tooling, dependencies, or configuration tasks | `chore/setup-prisma-schema` |
+| Branch Prefix | Purpose                                       | Example                               |
+| :------------ | :-------------------------------------------- | :------------------------------------ |
+| `feat/`       | New module, feature, or engine capability     | `feat/overlap-scoring-algorithm`      |
+| `fix/`        | Bug fixes and defect resolutions              | `fix/institution-id-normalization`    |
+| `docs/`       | Documentation additions or updates            | `docs/architecture-diagram-update`    |
+| `refactor/`   | Code refactoring without behavioral change    | `refactor/modularize-bureau-adapters` |
+| `test/`       | Adding or updating unit/integration tests     | `test/add-overlap-engine-fixtures`    |
+| `chore/`      | Tooling, dependencies, or configuration tasks | `chore/setup-prisma-schema`           |
 
 ---
 
@@ -47,6 +47,7 @@ We use the [Conventional Commits](https://www.conventionalcommits.org/) specific
 ```
 
 ### Commit Types
+
 - `feat`: A new feature or capability.
 - `fix`: A bug fix.
 - `docs`: Documentation updates.
@@ -56,6 +57,7 @@ We use the [Conventional Commits](https://www.conventionalcommits.org/) specific
 - `chore`: Scaffolding, build configuration, package updates.
 
 ### Examples
+
 - `feat(overlap): implement TF-IDF lexical match scoring`
 - `fix(institutions): handle hyphenated AICTE permanent IDs correctly`
 - `docs(git): document branch policies and pull request requirements`
@@ -66,19 +68,24 @@ We use the [Conventional Commits](https://www.conventionalcommits.org/) specific
 ## 4. Step-by-Step Development Workflow
 
 ### Step 1: Update Local Main Branch
+
 Before branching out, fetch and sync the latest state:
+
 ```bash
 git checkout main
 git pull origin main
 ```
 
 ### Step 2: Create a Dedicated Feature Branch
+
 ```bash
 git checkout -b feat/institution-search-resolver
 ```
 
 ### Step 3: Implement, Test, and Verify
+
 Work within the module boundaries (`src/modules/...`). Run tests continuously:
+
 ```bash
 # Verify linting, typing, and tests (when configured in future phases)
 npm run lint
@@ -86,7 +93,9 @@ npm run test
 ```
 
 ### Step 4: Stage & Commit Mindfully
+
 Inspect your changes before staging:
+
 ```bash
 git status
 git diff
@@ -95,10 +104,13 @@ git commit -m "feat(institutions): add fuzzy search helper for unlisted colleges
 ```
 
 ### Step 5: Push and Open a Pull Request
+
 Push the feature branch to GitHub:
+
 ```bash
 git push -u origin feat/institution-search-resolver
 ```
+
 - Open a Pull Request against `main`.
 - Fill in the PR summary describing what changes were made, testing steps verified, and any dependencies.
 - Request review from at least one peer before merging.

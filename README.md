@@ -12,6 +12,7 @@
 The All India Council for Technical Education (AICTE) receives complaints and grievances concerning affiliated institutions through multiple channels and distributed bureaus/cells (such as the Approval Bureau, Student Grievance Redressal / Anti-Ragging Cell, Faculty & Staff Grievance Cell, Vigilance Bureau, and Regional Offices).
 
 Currently, these cases are often handled in bureau-specific silos. This leads to:
+
 - Lack of centralized visibility into the holistic grievance profile of an institution.
 - Duplicate or overlapping complaints submitted simultaneously or sequentially to different bureaus by the same or different parties.
 - Parallel inquiries conducted without cross-bureau coordination, consuming redundant administrative effort.
@@ -54,13 +55,14 @@ The project is structured into clean, decoupled modules:
 - **Testing Framework:** [Vitest](https://vitest.dev/) (Unit & Integration tests)
 - **Styling:** Modern Vanilla CSS / Tailwind CSS (design system tokens)
 
-*Note: In accordance with Phase 1 constraints, dependencies have not been installed yet to maintain a clean baseline.*
+_Note: In accordance with Phase 1 constraints, dependencies have not been installed yet to maintain a clean baseline._
 
 ---
 
 ## 5. Current Status & Setup Guide
 
 ### Current State (Phase 1)
+
 - [x] Workspace directory scaffolding created.
 - [x] Modular architecture and documentation established.
 - [x] Environment configuration templates defined (`.env.example`).
@@ -75,23 +77,27 @@ The project is structured into clean, decoupled modules:
 ### Future Setup Instructions (Phase 2+)
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd sih-26264
    ```
 
 2. **Configure Environment Variables:**
+
    ```bash
    cp .env.example .env.local
    # Update .env.local with development database credentials
    ```
 
 3. **Install Dependencies (Phase 2):**
+
    ```bash
    npm install
    ```
 
 4. **Initialize Database (Phase 3):**
+
    ```bash
    npx prisma generate
    npx prisma migrate dev
@@ -106,7 +112,7 @@ The project is structured into clean, decoupled modules:
 
 ## 6. Implementation Roadmap
 
-- **Phase 1: Local Project Structure & Git Setup** *(Current)*
+- **Phase 1: Local Project Structure & Git Setup** _(Current)_
   - Modular directory layout, Git initialization, environment configs, documentation, remote repository linkage.
 - **Phase 2: Core Tooling & Framework Initialization**
   - Next.js setup, TypeScript configuration, testing setup with Vitest, and linting/formatting rules.
