@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   aictePermanentIdSchema,
+  createCanonicalComplaintPair,
+  overlapCandidateRecordSchema,
   overlapCandidateSchema,
   type OverlapCandidate,
 } from '@/modules/overlap-detection/schema';
@@ -21,7 +23,7 @@ describe('AICTE Permanent Institute ID Validation', () => {
   });
 });
 
-describe('Overlap Detection Candidate Schema', () => {
+describe('Overlap Detection Candidate Schema & Integrity Rules', () => {
   const validCandidate: OverlapCandidate = {
     primaryComplaintId: 'CMP-2026-001',
     candidateComplaintId: 'CMP-2026-042',
@@ -36,7 +38,17 @@ describe('Overlap Detection Candidate Schema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should reject similarity scores greater than 1.0 or less than 0.0', () => {
+  it('should strictly reject self-matches (same primary and candidate complaint ID)', () => {
+    const selfMatch = {
+      ...validCandidate,
+      primaryComplaintId: 'CMP-2026-001',
+      candidateComplaintId: 'CMP-2026-001',
+    };
+    const result = overlapCandidateSchema.safeParse(selfMatch);
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject similarity scores outside [0.0, 1.0]', () => {
     const overScore = { ...validCandidate, similarityScore: 1.15 };
     const underScore = { ...validCandidate, similarityScore: -0.2 };
 
@@ -56,5 +68,59 @@ describe('Overlap Detection Candidate Schema', () => {
 
     expect(overlapCandidateSchema.safeParse(singleBureau).success).toBe(false);
     expect(overlapCandidateSchema.safeParse(invalidBureau).success).toBe(false);
+  });
+});
+
+describe('Canonical Complaint Pair Ordering Utility', () => {
+  it('should order complaint pairs consistently regardless of argument order', () => {
+    const pair1 = createCanonicalComplaintPair('CMP-002', 'CMP-001');
+    const pair2 = createCanonicalComplaintPair('CMP-001', 'CMP-002');
+
+    expect(pair1.primaryComplaintId).toBe('CMP-001');
+    expect(pair1.candidateComplaintId).toBe('CMP-002');
+    expect(pair1).toEqual(pair2);
+  });
+
+  it('should throw an error when attempting to pair a complaint with itself', () => {
+    expect(() => createCanonicalComplaintPair('CMP-001', 'CMP-001')).toThrow(
+      'Complaint pairs cannot create self-matches'
+    );
+  });
+});
+
+describe('Detailed Overlap Candidate Database Record Validation', () => {
+  const validRecord = {
+    primaryComplaintId: 'cmp_alpha',
+    candidateComplaintId: 'cmp_beta',
+    institutionId: 'inst_matrix',
+    overallScore: 0.85,
+    entityScore: 1.0,
+    subjectScore: 0.82,
+    complainantScore: 0.6,
+    temporalScore: 0.95,
+    matchingSignals: {
+      commonKeywords: ['unapproved fee', 'refund'],
+      daysApart: 8,
+      involvedBureaus: ['STUDENT_GRIEVANCE_CELL', 'VIGILANCE_BUREAU'],
+      explanation: 'Both complaints report unauthorized fee levies within 8 days.',
+    },
+    reviewStatus: 'PENDING_REVIEW' as const,
+  };
+
+  it('should validate a complete explainable candidate record', () => {
+    const result = overlapCandidateRecordSchema.safeParse(validRecord);
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject candidate record when explanation is missing or too short', () => {
+    const invalidSignals = {
+      ...validRecord,
+      matchingSignals: {
+        ...validRecord.matchingSignals,
+        explanation: 'Bad',
+      },
+    };
+    const result = overlapCandidateRecordSchema.safeParse(invalidSignals);
+    expect(result.success).toBe(false);
   });
 });

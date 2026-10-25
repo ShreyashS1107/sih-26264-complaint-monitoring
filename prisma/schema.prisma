@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================================================================
+// Enums
+// ==============================================================================
+
+enum ApprovalStatus {
+  APPROVED
+  UNDER_SCRUTINY
+  PROVISIONAL
+  WITHDRAWN
+}
+
+enum OfficerRole {
+  CASE_OFFICER
+  SENIOR_SCRUTINIZER
+  BUREAU_HEAD
+  CENTRAL_ADMIN
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ComplaintStatus {
+  SUBMITTED
+  UNDER_PRELIMINARY_REVIEW
+  UNDER_INQUIRY
+  COORDINATED_REVIEW
+  RESOLVED
+  CLOSED
+  DISMISSED
+}
+
+enum ComplaintCategory {
+  FEE_ANOMALY
+  INFRASTRUCTURE_DEFICIT
+  FACULTY_NON_COMPLIANCE
+  HARASSMENT_RAGGING
+  ADMISSION_MALPRACTICE
+  UNAPPROVED_PROGRAM
+  OTHER
+}
+
+enum ComplainantType {
+  STUDENT
+  FACULTY
+  PARENT
+  CITIZEN
+  ANONYMOUS
+}
+
+enum ActionType {
+  STATUS_CHANGE
+  OFFICER_ASSIGNED
+  NOTE_ADDED
+  DOCUMENT_UPLOADED
+  OVERLAP_LINKED
+  OVERLAP_DISMISSED
+  JOINT_REVIEW_REQUESTED
+  RESOLUTION_ISSUED
+}
+
+enum OverlapReviewStatus {
+  PENDING_REVIEW
+  FLAGGED_JOINT_REVIEW
+  CONFIRMED_OVERLAP
+  DISMISSED_INDEPENDENT
+}
+
+// ==============================================================================
+// 1. Institution Model
+// Canonical AICTE Institution profile. Multiple complaints can belong to one
+// institution, but complaints across bureaus remain independent records.
+// ==============================================================================
+
+model Institution {
+  id                String            @id @default(cuid())
+  permanentId       String            @unique // Canonical AICTE Permanent ID (e.g., 1-12345678)
+  name              String
+  state             String
+  district          String
+  address           String?
+  pinCode           String?
+  institutionType   String            // Engineering & Tech, Management, Pharmacy, etc.
+  approvalStatus    ApprovalStatus    @default(APPROVED)
+  complaints        Complaint[]
+  overlapCandidates OverlapCandidate[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([permanentId])
+  @@index([state, district])
+  @@index([name])
+}
+
+// ==============================================================================
+// 2. Bureau Model
+// AICTE Bureau or Cell (Approval Bureau, Anti-Ragging Cell, Vigilance, etc.)
+// ==============================================================================
+
+model Bureau {
+  id          String      @id @default(cuid())
+  code        String      @unique // e.g., APPROVAL_BUREAU, ANTI_RAGGING_CELL
+  name        String      // e.g., "Approval Bureau", "Student Grievance Redressal Cell"
+  description String?
+  isActive    Boolean     @default(true)
+  officers    Officer[]
+  complaints  Complaint[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// ==============================================================================
+// 3. Officer Model
+// AICTE case officers and administrative users. Carries only essential identity
+// and assignment data; no unnecessary personal information.
+// ==============================================================================
+
+model Officer {
+  id                 String             @id @default(cuid())
+  badgeNumber        String             @unique // Official employee or badge identifier
+  name               String
+  email              String             @unique
+  bureauId           String
+  bureau             Bureau             @relation(fields: [bureauId], references: [id], onDelete: Restrict)
+  role               OfficerRole        @default(CASE_OFFICER)
+  isActive           Boolean            @default(true)
+  assignedComplaints Complaint[]        @relation("AssignedOfficer")
+  caseActions        CaseAction[]
+  reviewedOverlaps   OverlapCandidate[] @relation("ReviewedByOfficer")
+  auditLogs          AuditLog[]         @relation("ActorOfficer")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([bureauId])
+  @@index([role])
+}
+
+// ==============================================================================
+// 4. Complaint Model
+// Master complaint record. Preserves source bureau, original bureau reference,
+// priority, category, status lifecycle, and masked complainant identifier.
+// ==============================================================================
+
+model Complaint {
+  id                          String             @id @default(cuid())
+  complaintNumber             String             @unique // Unified tracking ID (e.g., CMP-2026-0001)
+  originalBureauRef           String             // Preserves source bureau's reference number
+  institutionId               String
+  institution                 Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  bureauId                    String
+  bureau                      Bureau             @relation(fields: [bureauId], references: [id], onDelete: Restrict)
+  assignedOfficerId           String?
+  assignedOfficer             Officer?           @relation("AssignedOfficer", fields: [assignedOfficerId], references: [id], onDelete: SetNull)
+  subject                     String
+  description                 String             @db.Text
+  category                    ComplaintCategory  @default(OTHER)
+  priority                    ComplaintPriority  @default(MEDIUM)
+  status                      ComplaintStatus    @default(SUBMITTED)
+  incidentDate                DateTime?
+  complainantType             ComplainantType    @default(STUDENT)
+  complainantMaskedId         String?            // Masked identifier (e.g., STU-***-9821) for privacy
+  caseActions                 CaseAction[]
+  primaryOverlapCandidates    OverlapCandidate[] @relation("PrimaryComplaint")
+  secondaryOverlapCandidates  OverlapCandidate[] @relation("SecondaryComplaint")
+  resolvedAt                  DateTime?
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+
+  @@index([institutionId])
+  @@index([bureauId])
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([createdAt])
+}
+
+// ==============================================================================
+// 5. CaseAction Model
+// Immutable timeline entries recording each stage transition, officer assignment,
+// note, or official decision on a complaint.
+// ==============================================================================
+
+model CaseAction {
+  id             String           @id @default(cuid())
+  complaintId    String
+  complaint      Complaint        @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  officerId      String?
+  officer        Officer?         @relation(fields: [officerId], references: [id], onDelete: SetNull)
+  actionType     ActionType
+  previousStatus ComplaintStatus?
+  newStatus      ComplaintStatus?
+  notes          String?          @db.Text
+  metadata       Json?            // Additional contextual key-value attributes
+  createdAt      DateTime         @default(now())
+
+  @@index([complaintId])
+  @@index([officerId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+// ==============================================================================
+// 6. OverlapCandidate Model
+// Candidate pairs identified by the cross-bureau overlap detection engine.
+// Produces reviewable candidates with explainable scores and matching signals;
+// NEVER automatically merges or discards complaints.
+// ==============================================================================
+
+model OverlapCandidate {
+  id                   String              @id @default(cuid())
+  primaryComplaintId   String
+  primaryComplaint     Complaint           @relation("PrimaryComplaint", fields: [primaryComplaintId], references: [id], onDelete: Cascade)
+  candidateComplaintId String
+  candidateComplaint   Complaint           @relation("SecondaryComplaint", fields: [candidateComplaintId], references: [id], onDelete: Cascade)
+  institutionId        String
+  institution          Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  overallScore         Float               // Overall composite similarity score (0.0 to 1.0)
+  entityScore          Float               // Institution / sub-entity match score
+  subjectScore         Float               // Lexical and semantic subject similarity
+  complainantScore     Float               // Masked complainant indicator match score
+  temporalScore        Float               // Proximity in submission dates score
+  matchingSignals      Json                // Transparent evidence payload (e.g., shared keywords, day delta)
+  reviewStatus         OverlapReviewStatus @default(PENDING_REVIEW)
+  reviewNotes          String?             @db.Text
+  reviewedById         String?
+  reviewedBy           Officer?            @relation("ReviewedByOfficer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt           DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@unique([primaryComplaintId, candidateComplaintId])
+  @@index([institutionId])
+  @@index([reviewStatus])
+  @@index([overallScore])
+}
+
+// ==============================================================================
+// 7. AuditLog Model
+// Tamper-evident operational audit trail for governance, access control, and
+// tracking sensitive actions across bureaus.
+// ==============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   // COMPLAINT, OVERLAP_CANDIDATE, INSTITUTION, etc.
+  entityId   String
+  action     String   // CREATE, STATUS_UPDATE, OVERLAP_REVIEW, etc.
+  actorId    String?
+  actor      Officer? @relation("ActorOfficer", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole  String?
+  bureauId   String?
+  details    Json     // Detailed change delta and audit metadata
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([actorId])
+}
