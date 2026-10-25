@@ -4,6 +4,7 @@ import React, { useState, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
+import { ApiStatusModal } from "../ui/api-status-modal";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ function ShellLayout({ children }: AppShellProps) {
   if (pathname === "/") {
     return (
       <div className="min-h-screen bg-[#080D18] text-slate-100 antialiased selection:bg-[#315EFB]/30 selection:text-white">
+        <ApiStatusModal />
         {children}
       </div>
     );
@@ -24,6 +26,7 @@ function ShellLayout({ children }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen bg-[#F7F5F0] text-[#0F172A] antialiased selection:bg-[#315EFB]/20 selection:text-[#050811]">
+      <ApiStatusModal />
       {/* Sidebar Navigation */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 

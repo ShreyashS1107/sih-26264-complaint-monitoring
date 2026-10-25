@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { IconMenu, IconSearch, IconShield, IconX } from "../ui/icons";
 import { Badge } from "../ui/badge";
+import { useComplaints } from "../../lib/context/complaint-context";
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -77,6 +78,7 @@ function getPageMeta(pathname: string): PageMeta {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { backendStatus, isLoading } = useComplaints();
   const [searchQuery, setSearchQuery] = useState("");
   const meta = getPageMeta(pathname);
 
@@ -145,11 +147,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           )}
         </form>
 
-        {/* Demo environment pill */}
-        <Badge variant="warning" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-          <span>Demo Data</span>
-        </Badge>
+        {/* Live Backend / Demo environment pill */}
+        {isLoading ? (
+          <Badge variant="neutral" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
+            <span>Syncing API...</span>
+          </Badge>
+        ) : backendStatus === "connected" ? (
+          <Badge variant="success" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>API Live</span>
+          </Badge>
+        ) : (
+          <Badge variant="warning" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs" title="PostgreSQL database offline — operating on seed data">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span>DB Offline (Seed Data)</span>
+          </Badge>
+        )}
 
         {/* User Identity Chip */}
         <div className="flex items-center gap-2.5 pl-1.5 sm:pl-3 border-l border-[#E5E7EB]">

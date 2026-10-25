@@ -147,7 +147,7 @@ function OverlapCompareContent() {
   }
 
   // 4. Handle Adjudication Submit
-  const handleAdjudicationSubmit = (e: React.FormEvent) => {
+  const handleAdjudicationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!rationaleNote.trim()) {
@@ -168,11 +168,18 @@ function OverlapCompareContent() {
 
     setIsSubmitting(true);
     try {
-      adjudicateOverlap(candidate.id, selectedVerdict, rationaleNote.trim(), officerName.trim());
-      setFeedback({
-        type: "success",
-        message: `Human adjudication decision "${selectedVerdict}" successfully recorded for pair ${candidate.id}.`,
-      });
+      const success = await adjudicateOverlap(candidate.id, selectedVerdict, rationaleNote.trim(), officerName.trim());
+      if (success) {
+        setFeedback({
+          type: "success",
+          message: `Human adjudication decision "${selectedVerdict}" successfully recorded for pair ${candidate.id}.`,
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: "Server rejected review decision: verified officer session required (401 Unauthorized).",
+        });
+      }
     } catch {
       setFeedback({
         type: "error",

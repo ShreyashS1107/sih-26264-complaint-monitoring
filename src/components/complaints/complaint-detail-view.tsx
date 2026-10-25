@@ -85,7 +85,7 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
     );
   }
 
-  const handleStatusUpdate = (e: React.FormEvent) => {
+  const handleStatusUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetStatus) return;
 
@@ -99,16 +99,23 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
 
     setIsUpdating(true);
     try {
-      updateComplaintStatus(
+      const success = await updateComplaintStatus(
         complaint.id,
         targetStatus,
         statusNote.trim() || `Administrative status transition to ${targetStatus}`
       );
-      setUpdateFeedback({
-        type: "success",
-        message: `Status successfully updated to "${targetStatus}".`,
-      });
-      setStatusNote("");
+      if (success) {
+        setUpdateFeedback({
+          type: "success",
+          message: `Status successfully updated to "${targetStatus}".`,
+        });
+        setStatusNote("");
+      } else {
+        setUpdateFeedback({
+          type: "error",
+          message: "Operation rejected by server: authorization required or invalid transition.",
+        });
+      }
     } catch {
       setUpdateFeedback({
         type: "error",
