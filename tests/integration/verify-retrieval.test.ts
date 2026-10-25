@@ -5,7 +5,9 @@ import { GET as complaintsGet } from '@/app/api/v1/complaints/route';
 import { GET as dashboardGet } from '@/app/api/v1/dashboard/summary/route';
 import { GET as overlapsGet } from '@/app/api/v1/overlap-candidates/route';
 
-describe('Live API Entity Verification', () => {
+const isDatabaseConfigured = Boolean(process.env.DATABASE_URL);
+
+describe.skipIf(!isDatabaseConfigured)('Live API Entity Verification', () => {
   it('verifies /api/v1/health reports connected database', async () => {
     const res = await healthGet();
     const body = await res.json();
