@@ -13,6 +13,9 @@ export const OfficerLoginModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorCategory, setErrorCategory] = useState<
+    'credentials' | 'database' | 'server' | 'network' | 'validation' | null
+  >(null);
   const [availableOfficers, setAvailableOfficers] = useState<
     Array<{
       id: string;
@@ -41,31 +44,38 @@ export const OfficerLoginModal: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (backendStatus === 'offline') {
+      setErrorCategory('database');
       setErrorMessage(
         'Database Offline: The live PostgreSQL server is disconnected. Officer authentication requires an active database session. You can continue testing in local demo mode without signing in.'
       );
       return;
     }
     if (!badgeNumber.trim()) {
+      setErrorCategory('validation');
       setErrorMessage('Official officer badge number is required.');
       return;
     }
 
     setIsLoading(true);
     setErrorMessage(null);
+    setErrorCategory(null);
 
     try {
-      const success = await switchOfficer(badgeNumber.trim(), email.trim() || undefined);
-      if (success) {
+      const res = await switchOfficer(badgeNumber.trim(), email.trim() || undefined);
+      if (res.success) {
         closeLoginModal();
         setBadgeNumber('');
         setEmail('');
+        setErrorCategory(null);
       } else {
+        setErrorCategory(res.category || 'credentials');
         setErrorMessage(
-          'Officer identity not found or inactive. Verify your AICTE badge number and institutional email.'
+          res.error ||
+            'Officer identity not found or inactive. Verify your AICTE badge number and institutional email.'
         );
       }
     } catch (err: unknown) {
+      setErrorCategory('server');
       setErrorMessage(
         err instanceof Error ? err.message : 'Authentication failed. Please verify credentials.'
       );
@@ -185,9 +195,37 @@ export const OfficerLoginModal: React.FC = () => {
             </div>
 
             {errorMessage && (
-              <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-950/30 text-xs text-rose-300 flex items-start gap-2">
-                <IconAlertTriangle size={16} className="shrink-0 mt-0.5" />
-                <span>{errorMessage}</span>
+              <div
+                className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 ${
+                  errorCategory === 'database' || errorCategory === 'server'
+                    ? 'border-amber-500/40 bg-amber-950/30 text-amber-200'
+                    : errorCategory === 'network'
+                      ? 'border-sky-500/30 bg-sky-950/30 text-sky-200'
+                      : 'border-rose-500/30 bg-rose-950/30 text-rose-300'
+                }`}
+              >
+                <IconAlertTriangle
+                  size={16}
+                  className={`shrink-0 mt-0.5 ${
+                    errorCategory === 'database' || errorCategory === 'server'
+                      ? 'text-amber-400'
+                      : errorCategory === 'network'
+                        ? 'text-sky-400'
+                        : 'text-rose-400'
+                  }`}
+                />
+                <div className="space-y-0.5">
+                  <p className="font-semibold">
+                    {errorCategory === 'database'
+                      ? 'Database Notice'
+                      : errorCategory === 'server'
+                        ? 'Backend Service Notice'
+                        : errorCategory === 'network'
+                          ? 'Network Communication Notice'
+                          : 'Authentication Failed'}
+                  </p>
+                  <p className="text-[11px] leading-relaxed opacity-90">{errorMessage}</p>
+                </div>
               </div>
             )}
 

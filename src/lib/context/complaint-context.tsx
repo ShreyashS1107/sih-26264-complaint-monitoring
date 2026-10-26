@@ -28,6 +28,12 @@ export interface ActionErrorState {
   details?: unknown;
 }
 
+export interface SwitchOfficerResult {
+  success: boolean;
+  error?: string;
+  category?: 'credentials' | 'database' | 'server' | 'network' | 'validation';
+}
+
 interface ComplaintContextType {
   complaints: Complaint[];
   overlaps: OverlapCandidate[];
@@ -53,7 +59,7 @@ interface ComplaintContextType {
   ) => Promise<boolean>;
   submitComplaint: (input: ComplaintSubmissionInput) => Promise<ComplaintSubmissionResult>;
   currentOfficer: any | null;
-  switchOfficer: (badgeNumber: string, email?: string) => Promise<boolean>;
+  switchOfficer: (badgeNumber: string, email?: string) => Promise<SwitchOfficerResult>;
   logoutOfficer: () => Promise<void>;
   isLoginModalOpen: boolean;
   openLoginModal: () => void;
@@ -391,16 +397,66 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   const switchOfficer = useCallback(
-    async (badgeNumber: string, email?: string): Promise<boolean> => {
+    async (badgeNumber: string, email?: string): Promise<SwitchOfficerResult> => {
       try {
         const res = await apiClient.login(badgeNumber, email);
         if (res?.officer) {
           setCurrentOfficer(res.officer);
-          return true;
+          return { success: true };
         }
-        return false;
-      } catch {
-        return false;
+        return {
+          success: false,
+          category: 'credentials',
+          error: 'Officer identity not found or inactive. Verify your AICTE badge number.',
+        };
+      } catch (err: unknown) {
+        if (err instanceof ApiError) {
+          if (err.status === 401 || err.code === 'INVALID_CREDENTIALS') {
+            return {
+              success: false,
+              category: 'credentials',
+              error: email
+                ? 'Officer identity not found. Verify your AICTE badge number and ensure the institutional email matches the officer record.'
+                : 'Officer identity not found or inactive. Verify your AICTE badge number.',
+            };
+          }
+          if (err.status === 503 || err.code === 'SERVICE_UNAVAILABLE') {
+            return {
+              success: false,
+              category: 'database',
+              error:
+                'Database Service Unavailable: The PostgreSQL server is unreachable. Please verify database connectivity.',
+            };
+          }
+          if (err.status === 500 || err.code === 'INTERNAL_SERVER_ERROR') {
+            return {
+              success: false,
+              category: 'database',
+              error:
+                'Database / Server Error: The authentication service encountered an error querying the officer registry. Verify that database migrations and demo officers are provisioned.',
+            };
+          }
+          if (err.status === 400 || err.code === 'VALIDATION_ERROR') {
+            return {
+              success: false,
+              category: 'validation',
+              error: err.message || 'Invalid badge number or email format.',
+            };
+          }
+          return {
+            success: false,
+            category: 'server',
+            error: `Authentication failed (HTTP ${err.status}): ${err.message}`,
+          };
+        }
+        return {
+          success: false,
+          category: 'network',
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Network request failed. Unable to reach the authentication service.',
+        };
       }
     },
     []

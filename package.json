@@ -20,6 +20,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:provision-officers": "node --experimental-strip-types scripts/provision-demo-officers.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {
