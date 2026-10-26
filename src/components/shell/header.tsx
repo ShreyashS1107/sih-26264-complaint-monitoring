@@ -68,6 +68,13 @@ function getPageMeta(pathname: string): PageMeta {
       breadcrumb: ['AICTE Intelligence', 'Audit Trail'],
     };
   }
+  if (pathname === '/submit-complaint') {
+    return {
+      title: 'Submit Grievance for Verification',
+      subtitle: 'Record an institutional complaint, attach exhibits, and run overlap analysis',
+      breadcrumb: ['AICTE Intelligence', 'Submit Complaint'],
+    };
+  }
   if (pathname === '/how-it-works') {
     return {
       title: 'System Architecture & Workflow',
@@ -86,7 +93,7 @@ function getPageMeta(pathname: string): PageMeta {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { backendStatus, isLoading, currentOfficer } = useComplaints();
+  const { backendStatus, isLoading, currentOfficer, openLoginModal } = useComplaints();
   const [searchQuery, setSearchQuery] = useState('');
   const meta = getPageMeta(pathname);
 
@@ -138,8 +145,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         </div>
       </div>
 
-      {/* Right: Search + Demo Indicator + User profile */}
-      <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+      {/* Right: Search + Quick Actions + User profile */}
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
         {/* Restrained Enterprise Search bar */}
         <form onSubmit={handleSearchSubmit} className="relative hidden md:block">
           <input
@@ -147,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search dossiers, institutions..."
-            className="h-8.5 w-52 lg:w-72 rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] pl-8.5 pr-8 text-xs text-[#172033] placeholder:text-[#697386] focus:border-[#315EFB] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 transition-all shadow-2xs"
+            className="h-8.5 w-44 lg:w-64 rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] pl-8.5 pr-8 text-xs text-[#172033] placeholder:text-[#697386] focus:border-[#315EFB] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 transition-all shadow-2xs"
           />
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-[#697386]">
             <IconSearch size={14} />
@@ -164,10 +171,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           )}
         </form>
 
+        {/* Submit Complaint Button */}
+        <Link
+          href="/submit-complaint"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#315EFB] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#254EDB] transition-all shadow-2xs"
+        >
+          <span>+ Submit Complaint</span>
+        </Link>
+
         {/* How It Works Link */}
         <Link
           href="/how-it-works"
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] px-2.5 py-1.5 text-xs font-semibold text-[#172033] hover:border-[#315EFB]/40 hover:bg-[#315EFB]/5 hover:text-[#315EFB] transition-all shadow-2xs"
+          className="hidden lg:inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] px-2.5 py-1.5 text-xs font-semibold text-[#172033] hover:border-[#315EFB]/40 hover:bg-[#315EFB]/5 hover:text-[#315EFB] transition-all shadow-2xs"
           title="Explain System Architecture and Methodology"
         >
           <IconCpu size={14} className="text-[#315EFB]" />
@@ -205,23 +220,34 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </Badge>
         )}
 
-        {/* User Identity Chip */}
-        <div className="flex items-center gap-2.5 pl-1.5 sm:pl-3 border-l border-[#E5E7EB]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#315EFB]/10 border border-[#315EFB]/20 text-[#315EFB]">
+        {/* User Identity Chip / Officer Sign-In */}
+        <button
+          type="button"
+          onClick={openLoginModal}
+          className="flex items-center gap-2.5 pl-1.5 sm:pl-3 border-l border-[#E5E7EB] hover:opacity-85 transition-opacity text-left cursor-pointer group"
+          title={
+            currentOfficer
+              ? 'Click to switch or verify officer account'
+              : 'Click to sign in with an officer account'
+          }
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#315EFB]/10 border border-[#315EFB]/20 text-[#315EFB] group-hover:bg-[#315EFB]/15 transition-colors shrink-0">
             <IconShield size={16} />
           </div>
           <div className="hidden xl:block text-left">
-            <span className="block text-xs font-bold text-[#172033] leading-none">
-              {currentOfficer?.name || 'Dr. S. K. Rao'}
+            <span className="block text-xs font-bold text-[#172033] leading-none group-hover:text-[#315EFB] transition-colors">
+              {currentOfficer ? currentOfficer.name : 'Officer Sign In'}
             </span>
             <span className="block text-[10px] font-medium text-[#697386] leading-none mt-1">
-              {currentOfficer?.bureau?.name ||
-                (currentOfficer?.role === 'CENTRAL_ADMIN'
-                  ? 'Central Administration'
-                  : 'Apex Scrutiny Cell')}
+              {currentOfficer
+                ? currentOfficer.bureau?.name ||
+                  (currentOfficer.role === 'CENTRAL_ADMIN'
+                    ? 'Central Administration'
+                    : 'Apex Scrutiny Cell')
+                : 'Guest / Scrutiny View'}
             </span>
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );

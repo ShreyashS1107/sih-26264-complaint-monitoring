@@ -12,6 +12,7 @@ import {
   OverlapReviewStatus,
   AuditEvent,
   BureauType,
+  EvidenceDocument,
 } from './types';
 
 // ==============================================================================
@@ -72,10 +73,7 @@ export function getClientAuthToken(): string | null {
   return activeAuthToken;
 }
 
-async function fetchApi<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (!headers.has('Content-Type') && options.method && options.method !== 'GET') {
     headers.set('Content-Type', 'application/json');
@@ -396,7 +394,8 @@ export const apiClient = {
       id: c.complaintNumber || c.id,
       title: c.subject,
       institutionId: res.institution?.permanentId || c.institution?.permanentId || 'INST-UNKNOWN',
-      institutionName: res.institution?.name || c.institution?.name || 'Unspecified AICTE Institute',
+      institutionName:
+        res.institution?.name || c.institution?.name || 'Unspecified AICTE Institute',
       region: res.institution?.district || c.institution?.district || 'Central',
       state: res.institution?.state || c.institution?.state || 'National',
       bureau: mapBackendBureau(res.bureau?.name || c.bureau?.name),
@@ -410,6 +409,137 @@ export const apiClient = {
       allegations: [c.subject],
       evidence: [],
       relatedCaseIds: [],
+    };
+  },
+
+  /**
+   * Ingest a new institutional complaint and run overlap detection
+   */
+  async createComplaint(payload: {
+    complaintNumber?: string;
+    originalBureauRef?: string;
+    institutionId: string;
+    bureauId: string;
+    assignedOfficerId?: string;
+    subject: string;
+    description: string;
+    category?: string;
+    priority?: string;
+    status?: string;
+    incidentDate?: string;
+    complainantType?: string;
+    complainantMaskedId?: string;
+    allegations?: string[];
+    evidence?: EvidenceDocument[];
+  }): Promise<{
+    complaint: Complaint;
+    overlaps: OverlapCandidate[];
+    rawResult: {
+      evaluatedPoolSize: number;
+      detectedCandidateCount: number;
+      candidates: any[];
+    };
+  }> {
+    const complaintNumber =
+      payload.complaintNumber || `CMP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const originalBureauRef = payload.originalBureauRef || `BUR-${Date.now().toString().slice(-6)}`;
+
+    const res = await fetchApi<{
+      complaint: BackendComplaintRecord & {
+        institution?: {
+          id: string;
+          permanentId: string;
+          name: string;
+          state: string;
+          district: string;
+        };
+        bureau?: { id: string; code: string; name: string };
+      };
+      overlaps: {
+        evaluatedPoolSize: number;
+        detectedCandidateCount: number;
+        candidates: any[];
+      };
+    }>('/api/v1/complaints', {
+      method: 'POST',
+      body: JSON.stringify({
+        complaintNumber,
+        originalBureauRef,
+        institutionId: payload.institutionId,
+        bureauId: payload.bureauId,
+        assignedOfficerId: payload.assignedOfficerId,
+        subject: payload.subject,
+        description: payload.description,
+        category: payload.category || 'OTHER',
+        priority: payload.priority || 'MEDIUM',
+        status: payload.status || 'SUBMITTED',
+        incidentDate: payload.incidentDate,
+        complainantType: payload.complainantType || 'STUDENT',
+        complainantMaskedId: payload.complainantMaskedId,
+      }),
+    });
+
+    const c = res.complaint;
+    const formattedComplaint: Complaint = {
+      id: c.complaintNumber || c.id,
+      title: c.subject,
+      institutionId: c.institution?.permanentId || payload.institutionId,
+      institutionName: c.institution?.name || 'Verified Institution',
+      region: c.institution?.district || 'General',
+      state: c.institution?.state || 'National',
+      bureau: mapBackendBureau(c.bureau?.name || c.bureau?.code),
+      category: c.category?.replace(/_/g, ' ') || 'General',
+      complainantType: (payload.complainantType as any) || 'Student',
+      filingDate: c.createdAt ? c.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      deadlineDate: new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10),
+      priority: mapBackendPriority(c.priority),
+      status: mapBackendStatus(c.status),
+      description: c.description,
+      allegations:
+        payload.allegations && payload.allegations.length > 0 ? payload.allegations : [c.subject],
+      evidence: payload.evidence || [],
+      relatedCaseIds: [],
+    };
+
+    const formattedOverlaps: OverlapCandidate[] = (res.overlaps.candidates || []).map(
+      (cand: any) => ({
+        id: `${cand.primaryComplaintId}-${cand.candidateComplaintId}`,
+        sourceComplaintId: cand.primaryComplaintId,
+        targetComplaintId: cand.candidateComplaintId,
+        signalScore: Math.round((cand.overallScore ?? 0) * 100),
+        matchingSignals: [
+          {
+            type: 'Text Similarity',
+            detail:
+              cand.matchingSignals?.explanation ||
+              `Overall match score: ${Math.round((cand.overallScore ?? 0) * 100)}%`,
+          },
+          ...(cand.matchingSignals?.commonKeywords && cand.matchingSignals.commonKeywords.length > 0
+            ? [
+                {
+                  type: 'Identical Faculty Named' as const,
+                  detail: `Matching keywords: ${cand.matchingSignals.commonKeywords.join(', ')}`,
+                },
+              ]
+            : []),
+          ...(cand.matchingSignals?.daysApart !== undefined &&
+          cand.matchingSignals?.daysApart !== null
+            ? [
+                {
+                  type: 'Temporal Proximity' as const,
+                  detail: `Filing gap: ${cand.matchingSignals.daysApart} days`,
+                },
+              ]
+            : []),
+        ],
+        reviewStatus: 'Pending',
+      })
+    );
+
+    return {
+      complaint: formattedComplaint,
+      overlaps: formattedOverlaps,
+      rawResult: res.overlaps,
     };
   },
 
@@ -458,7 +588,9 @@ export const apiClient = {
       matchingSignals: [
         {
           type: 'Text Similarity',
-          detail: c.matchingSignals?.explanation || `Composite overlap score: ${Math.round(c.overallScore * 100)}%`,
+          detail:
+            c.matchingSignals?.explanation ||
+            `Composite overlap score: ${Math.round(c.overallScore * 100)}%`,
         },
         ...(c.matchingSignals?.commonKeywords && c.matchingSignals.commonKeywords.length > 0
           ? [
@@ -489,11 +621,7 @@ export const apiClient = {
   /**
    * Submit human review decision for an overlap candidate
    */
-  async reviewOverlap(
-    id: string,
-    decision: OverlapReviewStatus,
-    note: string
-  ): Promise<void> {
+  async reviewOverlap(id: string, decision: OverlapReviewStatus, note: string): Promise<void> {
     const backendDecision = mapFrontendOverlapDecisionToBackend(decision);
     await fetchApi(`/api/v1/overlap-candidates/${encodeURIComponent(id)}/review`, {
       method: 'POST',
@@ -535,8 +663,12 @@ export const apiClient = {
       complaintId: l.entityType === 'COMPLAINT' ? l.entityId : undefined,
       actor: l.actorId || 'AICTE Officer',
       action: l.action.replace(/_/g, ' '),
-      details: l.metadata ? JSON.stringify(l.metadata) : `${l.action} on ${l.entityType}:${l.entityId}`,
-      timestamp: l.timestamp ? l.timestamp.replace('T', ' ').slice(0, 16) : new Date().toISOString(),
+      details: l.metadata
+        ? JSON.stringify(l.metadata)
+        : `${l.action} on ${l.entityType}:${l.entityId}`,
+      timestamp: l.timestamp
+        ? l.timestamp.replace('T', ' ').slice(0, 16)
+        : new Date().toISOString(),
     }));
 
     return { logs, total: res.pagination?.total ?? logs.length };
@@ -572,8 +704,42 @@ export const apiClient = {
   /**
    * List available institutional officers for verification
    */
-  async getOfficers(): Promise<Array<{ id: string; badgeNumber: string; name: string; role: string; bureau: any }>> {
+  async getOfficers(): Promise<
+    Array<{ id: string; badgeNumber: string; name: string; role: string; bureau: any }>
+  > {
     const res = await fetchApi<{ officers: any[] }>('/api/v1/auth/officers');
     return res.officers;
+  },
+
+  /**
+   * List approved institutions for complaint filing
+   */
+  async getInstitutions(query?: { search?: string; limit?: number }): Promise<
+    Array<{
+      id: string;
+      permanentId: string;
+      name: string;
+      state: string;
+      district: string;
+      institutionType: string;
+      approvalStatus: string;
+    }>
+  > {
+    const params = new URLSearchParams();
+    if (query?.search) params.set('search', query.search);
+    if (query?.limit) params.set('limit', String(query.limit));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetchApi<{
+      institutions: Array<{
+        id: string;
+        permanentId: string;
+        name: string;
+        state: string;
+        district: string;
+        institutionType: string;
+        approvalStatus: string;
+      }>;
+    }>(`/api/v1/institutions${qs}`);
+    return res.institutions || [];
   },
 };

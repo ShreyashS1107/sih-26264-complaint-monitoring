@@ -4,29 +4,29 @@
  */
 
 export type BureauType =
-  | "Approval Bureau"
-  | "Student Grievance Cell"
-  | "Faculty Development Cell"
-  | "Anti-Ragging Cell"
-  | "Finance & Legal Cell";
+  | 'Approval Bureau'
+  | 'Student Grievance Cell'
+  | 'Faculty Development Cell'
+  | 'Anti-Ragging Cell'
+  | 'Finance & Legal Cell';
 
-export type ComplaintPriority = "Critical" | "High" | "Medium" | "Low";
+export type ComplaintPriority = 'Critical' | 'High' | 'Medium' | 'Low';
 
 export type ComplaintStatus =
-  | "Under Scrutiny"
-  | "Assigned to Bureau"
-  | "Show-Cause Notice Issued"
-  | "Institution Response Received"
-  | "Hearing Scheduled"
-  | "Resolved"
-  | "Escalated";
+  | 'Under Scrutiny'
+  | 'Assigned to Bureau'
+  | 'Show-Cause Notice Issued'
+  | 'Institution Response Received'
+  | 'Hearing Scheduled'
+  | 'Resolved'
+  | 'Escalated';
 
 export interface EvidenceDocument {
   id: string;
   name: string;
   fileSize: string;
   uploadDate: string;
-  category: "Affidavit" | "Fee Receipt" | "Communication" | "Inspection Report" | "Audit Report";
+  category: 'Affidavit' | 'Fee Receipt' | 'Communication' | 'Inspection Report' | 'Audit Report';
 }
 
 export interface Complaint {
@@ -38,7 +38,7 @@ export interface Complaint {
   state: string;
   bureau: BureauType;
   category: string;
-  complainantType: "Student" | "Faculty" | "Parent" | "Anonymous" | "Whistleblower";
+  complainantType: 'Student' | 'Faculty' | 'Parent' | 'Anonymous' | 'Whistleblower';
   filingDate: string;
   deadlineDate: string;
   priority: ComplaintPriority;
@@ -50,18 +50,18 @@ export interface Complaint {
 }
 
 export type OverlapSignalType =
-  | "Text Similarity"
-  | "Same Institution ID"
-  | "Identical Faculty Named"
-  | "Contact Hash Match"
-  | "Temporal Proximity";
+  | 'Text Similarity'
+  | 'Same Institution ID'
+  | 'Identical Faculty Named'
+  | 'Contact Hash Match'
+  | 'Temporal Proximity';
 
 export interface OverlapMatchingSignal {
   type: OverlapSignalType;
   detail: string;
 }
 
-export type OverlapReviewStatus = "Pending" | "Linked" | "Independent" | "Dismissed";
+export type OverlapReviewStatus = 'Pending' | 'Linked' | 'Independent' | 'Dismissed';
 
 export interface OverlapCandidate {
   id: string;
@@ -82,4 +82,32 @@ export interface AuditEvent {
   action: string;
   details: string;
   timestamp: string;
+}
+
+export interface ComplaintSubmissionInput {
+  institutionId: string;
+  institutionName: string;
+  permanentId?: string;
+  state?: string;
+  district?: string;
+  bureau: BureauType;
+  bureauId?: string;
+  category: string;
+  priority: ComplaintPriority;
+  subject: string;
+  description: string;
+  allegations: string[];
+  evidence: EvidenceDocument[];
+  complainantType: 'Student' | 'Faculty' | 'Parent' | 'Anonymous' | 'Whistleblower';
+  complainantMaskedId?: string;
+}
+
+export interface ComplaintSubmissionResult {
+  success: boolean;
+  complaint: Complaint;
+  overlaps: OverlapCandidate[];
+  mode: 'live-backend' | 'local-demo';
+  evaluatedPoolSize: number;
+  detectedCandidateCount: number;
+  rawSignals?: any;
 }

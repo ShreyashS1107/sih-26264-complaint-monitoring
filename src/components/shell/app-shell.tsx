@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { ApiStatusModal } from '../ui/api-status-modal';
+import { OfficerLoginModal } from '../auth/officer-login-modal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -14,11 +15,12 @@ function ShellLayout({ children }: AppShellProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // The homepage and architecture / explainer page have their own cinematic presentation without the standard dashboard sidebar and header
+  // The homepage and architecture / explainer page have their own standalone presentation without the standard dashboard sidebar and header
   if (pathname === '/' || pathname === '/how-it-works') {
     return (
-      <div className="min-h-screen bg-[#080D18] text-slate-100 antialiased selection:bg-[#315EFB]/30 selection:text-white">
+      <div className="min-h-screen bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#315EFB]/30 selection:text-white">
         <ApiStatusModal />
+        <OfficerLoginModal />
         {children}
       </div>
     );
@@ -27,6 +29,7 @@ function ShellLayout({ children }: AppShellProps) {
   return (
     <div className="flex min-h-screen bg-[#F7F5F0] text-[#0F172A] antialiased selection:bg-[#315EFB]/20 selection:text-[#050811]">
       <ApiStatusModal />
+      <OfficerLoginModal />
       {/* Sidebar Navigation */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 

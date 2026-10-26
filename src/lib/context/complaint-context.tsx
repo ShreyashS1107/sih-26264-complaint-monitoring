@@ -1,27 +1,23 @@
-"use client";
+'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  useCallback,
-  useEffect,
-} from "react";
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Complaint,
   ComplaintStatus,
   OverlapCandidate,
   OverlapReviewStatus,
   AuditEvent,
-} from "../types";
-import { DEMO_COMPLAINTS } from "../mock-data/complaints";
-import { DEMO_OVERLAPS } from "../mock-data/overlaps";
-import { DEMO_AUDIT_LOGS } from "../mock-data/audit";
-import { apiClient, ApiError, BackendDashboardSummary } from "../api-client";
+  ComplaintSubmissionInput,
+  ComplaintSubmissionResult,
+} from '../types';
+import { DEMO_COMPLAINTS } from '../mock-data/complaints';
+import { DEMO_OVERLAPS } from '../mock-data/overlaps';
+import { DEMO_AUDIT_LOGS } from '../mock-data/audit';
+import { apiClient, ApiError, BackendDashboardSummary } from '../api-client';
+import { scanForOverlapCandidates, ComplaintInput } from '../../modules/overlap-detection/engine';
 
-export type BackendConnectionStatus = "checking" | "connected" | "offline" | "error";
-export type DataSourceType = "backend" | "local-seed";
+export type BackendConnectionStatus = 'checking' | 'connected' | 'offline' | 'error';
+export type DataSourceType = 'backend' | 'local-seed';
 
 export interface ActionErrorState {
   title: string;
@@ -55,9 +51,13 @@ interface ComplaintContextType {
     note: string,
     officerName?: string
   ) => Promise<boolean>;
+  submitComplaint: (input: ComplaintSubmissionInput) => Promise<ComplaintSubmissionResult>;
   currentOfficer: any | null;
   switchOfficer: (badgeNumber: string, email?: string) => Promise<boolean>;
   logoutOfficer: () => Promise<void>;
+  isLoginModalOpen: boolean;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
   getComplaint: (id: string) => Complaint | undefined;
   getOverlap: (id: string) => OverlapCandidate | undefined;
   getOverlapsForComplaint: (complaintId: string) => OverlapCandidate[];
@@ -72,14 +72,18 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [dashboardSummary, setDashboardSummary] = useState<BackendDashboardSummary | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [backendStatus, setBackendStatus] = useState<BackendConnectionStatus>("checking");
-  const [dataSource, setDataSource] = useState<DataSourceType>("local-seed");
+  const [backendStatus, setBackendStatus] = useState<BackendConnectionStatus>('checking');
+  const [dataSource, setDataSource] = useState<DataSourceType>('local-seed');
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [currentOfficer, setCurrentOfficer] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [actionError, setActionError] = useState<ActionErrorState | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+
+  const openLoginModal = useCallback(() => setIsLoginModalOpen(true), []);
+  const closeLoginModal = useCallback(() => setIsLoginModalOpen(false), []);
 
   // Clear modal error
   const clearActionError = useCallback(() => {
@@ -88,12 +92,12 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Compute pending overlaps count for badges
   const pendingOverlapCount = useMemo(() => {
-    return overlaps.filter((o) => o.reviewStatus === "Pending").length;
+    return overlaps.filter((o) => o.reviewStatus === 'Pending').length;
   }, [overlaps]);
 
   // Compute critical complaints count
   const criticalComplaintCount = useMemo(() => {
-    return complaints.filter((c) => c.priority === "Critical" && c.status !== "Resolved").length;
+    return complaints.filter((c) => c.priority === 'Critical' && c.status !== 'Resolved').length;
   }, [complaints]);
 
   // Load backend data if available, or fall back transparently
@@ -104,26 +108,18 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       // 1. Check health
       const health = await apiClient.getHealth();
-      if (health.database === "connected") {
-        setBackendStatus("connected");
+      if (health.database === 'connected') {
+        setBackendStatus('connected');
 
-        // 2. Resolve or establish active officer session
+        // 2. Resolve active officer session if token/cookie is present
         try {
           const me = await apiClient.getCurrentOfficer();
           if (me?.officer) {
             setCurrentOfficer(me.officer);
           }
         } catch {
-          if (process.env.NODE_ENV !== "production") {
-            try {
-              const res = await apiClient.login("OFF-AICTE-000", "dr.sk.rao@demo.aicte.internal");
-              if (res?.officer) {
-                setCurrentOfficer(res.officer);
-              }
-            } catch {
-              // Ignore failure
-            }
-          }
+          // No active officer session. Genuine auth preserved — user can sign in as needed.
+          setCurrentOfficer(null);
         }
 
         // 3. Fetch live data concurrently
@@ -135,35 +131,39 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ]);
 
         let hasLiveComplaints = false;
-        if (complaintsRes.status === "fulfilled" && complaintsRes.value.complaints.length > 0) {
+        if (complaintsRes.status === 'fulfilled' && complaintsRes.value.complaints.length > 0) {
           setComplaints(complaintsRes.value.complaints);
           hasLiveComplaints = true;
         }
 
-        if (overlapsRes.status === "fulfilled" && overlapsRes.value.candidates.length > 0) {
+        if (overlapsRes.status === 'fulfilled' && overlapsRes.value.candidates.length > 0) {
           setOverlaps(overlapsRes.value.candidates);
         }
 
-        if (summaryRes.status === "fulfilled") {
+        if (summaryRes.status === 'fulfilled') {
           setDashboardSummary(summaryRes.value);
         }
 
-        if (auditRes.status === "fulfilled" && auditRes.value.logs.length > 0) {
+        if (auditRes.status === 'fulfilled' && auditRes.value.logs.length > 0) {
           setAuditLogs(auditRes.value.logs);
         }
 
-        setDataSource(hasLiveComplaints ? "backend" : "local-seed");
+        setDataSource(hasLiveComplaints ? 'backend' : 'local-seed');
         setLastSyncedAt(new Date().toLocaleTimeString());
       } else {
-        setBackendStatus("offline");
-        setDataSource("local-seed");
-        setSyncError("PostgreSQL database is currently disconnected. Running on institutional baseline fixtures.");
+        setBackendStatus('offline');
+        setDataSource('local-seed');
+        setSyncError(
+          'PostgreSQL database is currently disconnected. Running on institutional baseline fixtures.'
+        );
       }
     } catch (err: unknown) {
-      setBackendStatus("offline");
-      setDataSource("local-seed");
-      const msg = err instanceof Error ? err.message : "Backend unreachable";
-      setSyncError(`Backend API connection unavailable (${msg}). Displaying institutional demo fixtures.`);
+      setBackendStatus('offline');
+      setDataSource('local-seed');
+      const msg = err instanceof Error ? err.message : 'Backend unreachable';
+      setSyncError(
+        `Backend API connection unavailable (${msg}). Displaying institutional demo fixtures.`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -203,10 +203,10 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const newAudit: AuditEvent = {
           id: `AUD-${Date.now()}`,
           complaintId: id,
-          actor: "Authorized Scrutiny Officer",
+          actor: 'Authorized Scrutiny Officer',
           action: `Status Updated to ${newStatus}`,
           details: noteText,
-          timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
+          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
 
@@ -214,19 +214,19 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } catch (err: unknown) {
         if (err instanceof ApiError) {
           // Check for security fail-closed invariant
-          if (err.status === 401 || err.code === "UNAUTHORIZED") {
+          if (err.status === 401 || err.code === 'UNAUTHORIZED') {
             setActionError({
-              title: "Authentication Required (Fail-Closed Security)",
+              title: 'Authentication Required (Fail-Closed Security)',
               code: err.code,
               status: err.status,
               endpoint: `PATCH /api/v1/complaints/${id}`,
               message:
-                "Protected write operation was safely rejected by the server (HTTP 401 Unauthorized). As documented in the security model, no client-side role spoofing is permitted, and write mutations fail-closed until an enterprise identity provider (SSO/NextAuth) is configured in this deployment.",
+                'Protected write operation was safely rejected by the server (HTTP 401 Unauthorized). As documented in the security model, no client-side role spoofing is permitted, and write mutations fail-closed until an enterprise identity provider (SSO/NextAuth) is configured in this deployment.',
               details: err.details,
             });
           } else {
             setActionError({
-              title: "Backend API Error",
+              title: 'Backend API Error',
               code: err.code,
               status: err.status,
               endpoint: `PATCH /api/v1/complaints/${id}`,
@@ -236,11 +236,11 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
         } else {
           setActionError({
-            title: "Network Connection Failure",
-            code: "NETWORK_ERROR",
+            title: 'Network Connection Failure',
+            code: 'NETWORK_ERROR',
             status: 0,
             endpoint: `PATCH /api/v1/complaints/${id}`,
-            message: err instanceof Error ? err.message : "Unable to reach the backend API server.",
+            message: err instanceof Error ? err.message : 'Unable to reach the backend API server.',
           });
         }
         return false;
@@ -257,7 +257,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       overlapId: string,
       decision: OverlapReviewStatus,
       note: string,
-      officerName: string = "Dr. S. K. Rao (Apex Scrutiny Officer)"
+      officerName: string = 'Dr. S. K. Rao (Apex Scrutiny Officer)'
     ): Promise<boolean> => {
       setIsSubmitting(true);
       setActionError(null);
@@ -269,8 +269,8 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         await apiClient.reviewOverlap(overlapId, decision, noteText);
 
         // Server confirmed: update local state
-        let affectedSourceId = "";
-        let affectedTargetId = "";
+        let affectedSourceId = '';
+        let affectedTargetId = '';
 
         setOverlaps((prev) =>
           prev.map((item) => {
@@ -281,7 +281,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 ...item,
                 reviewStatus: decision,
                 adjudicatedBy: officerName,
-                adjudicatedAt: new Date().toISOString().replace("T", " ").slice(0, 16),
+                adjudicatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
                 adjudicationNote: noteText,
               };
             }
@@ -289,7 +289,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           })
         );
 
-        if (decision === "Linked" && affectedSourceId && affectedTargetId) {
+        if (decision === 'Linked' && affectedSourceId && affectedTargetId) {
           setComplaints((prev) =>
             prev.map((c) => {
               if (c.id === affectedSourceId) {
@@ -320,29 +320,29 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           complaintId: affectedSourceId || undefined,
           actor: officerName,
           action: `Overlap Adjudicated: ${decision}`,
-          details: `Human verdict '${decision}' for candidate pair (${affectedSourceId || "N/A"} ↔ ${
-            affectedTargetId || "N/A"
+          details: `Human verdict '${decision}' for candidate pair (${affectedSourceId || 'N/A'} ↔ ${
+            affectedTargetId || 'N/A'
           }). Rationale: ${noteText}`,
-          timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
+          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
 
         return true;
       } catch (err: unknown) {
         if (err instanceof ApiError) {
-          if (err.status === 401 || err.code === "UNAUTHORIZED") {
+          if (err.status === 401 || err.code === 'UNAUTHORIZED') {
             setActionError({
-              title: "Authentication Required (Fail-Closed Security)",
+              title: 'Authentication Required (Fail-Closed Security)',
               code: err.code,
               status: err.status,
               endpoint: `POST /api/v1/overlap-candidates/${overlapId}/review`,
               message:
-                "Overlap review submission was safely rejected by the server (HTTP 401 Unauthorized). As documented in the security model, overlap adjudication requires a cryptographically verified officer session. Write operations fail-closed until an identity provider is active.",
+                'Overlap review submission was safely rejected by the server (HTTP 401 Unauthorized). As documented in the security model, overlap adjudication requires a cryptographically verified officer session. Write operations fail-closed until an identity provider is active.',
               details: err.details,
             });
           } else {
             setActionError({
-              title: "Backend API Error",
+              title: 'Backend API Error',
               code: err.code,
               status: err.status,
               endpoint: `POST /api/v1/overlap-candidates/${overlapId}/review`,
@@ -352,11 +352,11 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
         } else {
           setActionError({
-            title: "Network Connection Failure",
-            code: "NETWORK_ERROR",
+            title: 'Network Connection Failure',
+            code: 'NETWORK_ERROR',
             status: 0,
             endpoint: `POST /api/v1/overlap-candidates/${overlapId}/review`,
-            message: err instanceof Error ? err.message : "Unable to reach the backend API server.",
+            message: err instanceof Error ? err.message : 'Unable to reach the backend API server.',
           });
         }
         return false;
@@ -390,18 +390,21 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [overlaps]
   );
 
-  const switchOfficer = useCallback(async (badgeNumber: string, email?: string): Promise<boolean> => {
-    try {
-      const res = await apiClient.login(badgeNumber, email);
-      if (res?.officer) {
-        setCurrentOfficer(res.officer);
-        return true;
+  const switchOfficer = useCallback(
+    async (badgeNumber: string, email?: string): Promise<boolean> => {
+      try {
+        const res = await apiClient.login(badgeNumber, email);
+        if (res?.officer) {
+          setCurrentOfficer(res.officer);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
       }
-      return false;
-    } catch {
-      return false;
-    }
-  }, []);
+    },
+    []
+  );
 
   const logoutOfficer = useCallback(async () => {
     try {
@@ -410,6 +413,208 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentOfficer(null);
     }
   }, []);
+
+  // Submit a new complaint, running either live backend overlap detection or in-memory pure engine fallback
+  const submitComplaint = useCallback(
+    async (input: ComplaintSubmissionInput): Promise<ComplaintSubmissionResult> => {
+      setIsSubmitting(true);
+      setActionError(null);
+
+      try {
+        if (backendStatus === 'connected') {
+          // Live Database mode: requires an authenticated officer session
+          if (!currentOfficer) {
+            setIsLoginModalOpen(true);
+            throw new Error(
+              'Authentication Required: Please sign in with an authorized AICTE officer badge number to submit complaints to the live registry.'
+            );
+          }
+
+          const res = await apiClient.createComplaint({
+            institutionId: input.institutionId,
+            bureauId: input.bureauId || currentOfficer.bureauId,
+            assignedOfficerId: currentOfficer.id,
+            subject: input.subject,
+            description: input.description,
+            category: input.category,
+            priority: input.priority,
+            complainantType: input.complainantType,
+            complainantMaskedId: input.complainantMaskedId,
+            allegations: input.allegations,
+            evidence: input.evidence,
+          });
+
+          // Add to local state
+          setComplaints((prev) => [res.complaint, ...prev]);
+          if (res.overlaps.length > 0) {
+            setOverlaps((prev) => [...res.overlaps, ...prev]);
+          }
+
+          const newAudit: AuditEvent = {
+            id: `AUD-${Date.now()}`,
+            complaintId: res.complaint.id,
+            actor: currentOfficer?.name || 'Authorized Scrutiny Officer',
+            action: 'Ingested Grievance via Portal',
+            details: `Registered ${res.complaint.id} (${res.complaint.bureau}) with ${res.overlaps.length} cross-bureau overlap candidates flagged`,
+            timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+          };
+          setAuditLogs((prev) => [newAudit, ...prev]);
+
+          return {
+            success: true,
+            complaint: res.complaint,
+            overlaps: res.overlaps,
+            mode: 'live-backend',
+            evaluatedPoolSize: res.rawResult.evaluatedPoolSize,
+            detectedCandidateCount: res.rawResult.detectedCandidateCount,
+          };
+        } else {
+          // Local Demo / Offline Fallback: Run pure deterministic algorithm on local state
+          const newId = `AICTE-2026-${Math.floor(8500 + Math.random() * 900)}`;
+          const filingDate = new Date().toISOString().slice(0, 10);
+          const deadlineDate = new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
+
+          const newComplaint: Complaint = {
+            id: newId,
+            title: input.subject,
+            institutionId: input.permanentId || input.institutionId || 'AICTE-INST-8821',
+            institutionName: input.institutionName,
+            region: input.district || 'Western',
+            state: input.state || 'Maharashtra',
+            bureau: input.bureau,
+            category: input.category,
+            complainantType: input.complainantType,
+            filingDate,
+            deadlineDate,
+            priority: input.priority,
+            status: 'Under Scrutiny',
+            description: input.description,
+            allegations: input.allegations.length > 0 ? input.allegations : [input.subject],
+            evidence: input.evidence,
+            relatedCaseIds: [],
+          };
+
+          // Convert current complaints pool into ComplaintInput format for engine
+          const targetInput: ComplaintInput = {
+            id: newComplaint.id,
+            complaintNumber: newComplaint.id,
+            originalBureauRef: `BUR-${Date.now().toString().slice(-6)}`,
+            bureauId: newComplaint.bureau,
+            institutionId: newComplaint.institutionId,
+            institution: {
+              permanentId: newComplaint.institutionId,
+              name: newComplaint.institutionName,
+              state: newComplaint.state,
+              district: newComplaint.region,
+            },
+            subject: newComplaint.title,
+            description: newComplaint.description,
+            category: newComplaint.category,
+            priority: newComplaint.priority,
+            complainantType: newComplaint.complainantType,
+            complainantMaskedId: input.complainantMaskedId,
+            createdAt: newComplaint.filingDate,
+          };
+
+          const poolInputs: ComplaintInput[] = complaints.map((c) => ({
+            id: c.id,
+            complaintNumber: c.id,
+            originalBureauRef: c.id,
+            bureauId: c.bureau,
+            institutionId: c.institutionId,
+            institution: {
+              permanentId: c.institutionId,
+              name: c.institutionName,
+              state: c.state,
+              district: c.region,
+            },
+            subject: c.title,
+            description: c.description,
+            category: c.category,
+            priority: c.priority,
+            complainantType: c.complainantType,
+            createdAt: c.filingDate,
+          }));
+
+          // Run the real pure algorithm without fabricating scores
+          const detected = scanForOverlapCandidates(targetInput, poolInputs, 0.35);
+
+          const generatedOverlaps: OverlapCandidate[] = detected.map((cand) => ({
+            id: `OVL-${cand.primaryComplaintId}-${cand.candidateComplaintId}`,
+            sourceComplaintId: cand.primaryComplaintId,
+            targetComplaintId: cand.candidateComplaintId,
+            signalScore: Math.round(cand.overallScore * 100),
+            matchingSignals: [
+              {
+                type: 'Text Similarity',
+                detail: cand.matchingSignals.explanation,
+              },
+              ...(cand.matchingSignals.commonKeywords &&
+              cand.matchingSignals.commonKeywords.length > 0
+                ? [
+                    {
+                      type: 'Identical Faculty Named' as const,
+                      detail: `Matching keywords: ${cand.matchingSignals.commonKeywords.join(', ')}`,
+                    },
+                  ]
+                : []),
+              ...(cand.matchingSignals.daysApart !== undefined &&
+              cand.matchingSignals.daysApart !== null
+                ? [
+                    {
+                      type: 'Temporal Proximity' as const,
+                      detail: `Filing gap: ${cand.matchingSignals.daysApart} days`,
+                    },
+                  ]
+                : []),
+            ],
+            reviewStatus: 'Pending',
+          }));
+
+          // Update local state
+          setComplaints((prev) => [newComplaint, ...prev]);
+          if (generatedOverlaps.length > 0) {
+            setOverlaps((prev) => [...generatedOverlaps, ...prev]);
+          }
+
+          const newAudit: AuditEvent = {
+            id: `AUD-${Date.now()}`,
+            complaintId: newId,
+            actor: currentOfficer?.name || 'Scrutiny Session',
+            action: 'Submitted Institutional Grievance (Local Baseline)',
+            details: `Registered ${newId} (${newComplaint.bureau}) with ${generatedOverlaps.length} advisory overlap candidates flagged`,
+            timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+          };
+          setAuditLogs((prev) => [newAudit, ...prev]);
+
+          return {
+            success: true,
+            complaint: newComplaint,
+            overlaps: generatedOverlaps,
+            mode: 'local-demo',
+            evaluatedPoolSize: complaints.length,
+            detectedCandidateCount: generatedOverlaps.length,
+            rawSignals: detected,
+          };
+        }
+      } catch (err: unknown) {
+        if (err instanceof ApiError) {
+          setActionError({
+            title: 'Complaint Submission Error',
+            code: err.code,
+            status: err.status,
+            endpoint: 'POST /api/v1/complaints',
+            message: err.message,
+            details: err.details,
+          });
+        }
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [backendStatus, complaints, currentOfficer]
+  );
 
   const value = useMemo(
     () => ({
@@ -429,10 +634,14 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       currentOfficer,
       switchOfficer,
       logoutOfficer,
+      isLoginModalOpen,
+      openLoginModal,
+      closeLoginModal,
       clearActionError,
       refreshData,
       updateComplaintStatus,
       adjudicateOverlap,
+      submitComplaint,
       getComplaint,
       getOverlap,
       getOverlapsForComplaint,
@@ -454,10 +663,14 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       currentOfficer,
       switchOfficer,
       logoutOfficer,
+      isLoginModalOpen,
+      openLoginModal,
+      closeLoginModal,
       clearActionError,
       refreshData,
       updateComplaintStatus,
       adjudicateOverlap,
+      submitComplaint,
       getComplaint,
       getOverlap,
       getOverlapsForComplaint,
@@ -470,7 +683,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 export const useComplaints = (): ComplaintContextType => {
   const context = useContext(ComplaintContext);
   if (!context) {
-    throw new Error("useComplaints must be used within a ComplaintProvider");
+    throw new Error('useComplaints must be used within a ComplaintProvider');
   }
   return context;
 };

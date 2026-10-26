@@ -32,6 +32,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { name: 'Overview', href: '/', icon: IconDashboard },
   { name: 'Complaints', href: '/complaints', icon: IconFileText },
+  { name: 'Submit Complaint', href: '/submit-complaint', icon: IconFileText },
   { name: 'Overlap Review', href: '/overlap-review', icon: IconLayers, badge: 'overlaps' },
   { name: 'Analytics', href: '/analytics', icon: IconBarChart },
   { name: 'Audit Trail', href: '/audit-trail', icon: IconScale },
