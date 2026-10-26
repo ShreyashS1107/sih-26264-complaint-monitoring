@@ -1,14 +1,9 @@
-"use client";
+'use client';
 
-import React, { useState, useMemo, useRef } from "react";
-import Link from "next/link";
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useSpring,
-} from "motion/react";
-import { useComplaints } from "../lib/context/complaint-context";
+import React, { useState, useMemo, useRef } from 'react';
+import Link from 'next/link';
+import { motion, useScroll, useTransform, useSpring } from 'motion/react';
+import { useComplaints } from '../lib/context/complaint-context';
 import {
   IconShield,
   IconArrowRight,
@@ -22,10 +17,10 @@ import {
   IconX,
   IconBarChart,
   IconBuilding,
-} from "../components/ui/icons";
-import { PriorityBadge, StatusBadge } from "../components/ui/badge";
-import { OperationalDashboard } from "../components/dashboard/operational-dashboard";
-import { AnimatedNumber } from "../components/motion/animated-number";
+} from '../components/ui/icons';
+import { PriorityBadge, StatusBadge } from '../components/ui/badge';
+import { OperationalDashboard } from '../components/dashboard/operational-dashboard';
+import { AnimatedNumber } from '../components/motion/animated-number';
 
 export default function MaximalistHomepage() {
   const { complaints, overlaps, pendingOverlapCount } = useComplaints();
@@ -48,7 +43,7 @@ export default function MaximalistHomepage() {
   // 1. Hero Scroll Choreography
   const { scrollYProgress: heroProgress } = useScroll({
     target: heroRef,
-    offset: ["start start", "end start"],
+    offset: ['start start', 'end start'],
   });
   const heroHeadlineY = useTransform(heroProgress, [0, 1], [0, -120]);
   const heroOpacity = useTransform(heroProgress, [0, 0.75], [1, 0.05]);
@@ -58,22 +53,22 @@ export default function MaximalistHomepage() {
   // 2. Monitor Sticky Scroll Choreography (Pinned 240vh sequence)
   const { scrollYProgress: monitorProgress } = useScroll({
     target: monitorRef,
-    offset: ["start start", "end end"],
+    offset: ['start start', 'end end'],
   });
   const monitorBigNumScale = useTransform(monitorProgress, [0, 0.35], [1.3, 0.9]);
   const monitorBigNumY = useTransform(monitorProgress, [0, 0.35], [0, -40]);
   const monitorBigNumOpacity = useTransform(monitorProgress, [0.35, 0.65], [1, 0.25]);
-  const monitorCardsX = useTransform(monitorProgress, [0.2, 0.7], ["120%", "0%"]);
+  const monitorCardsX = useTransform(monitorProgress, [0.2, 0.7], ['120%', '0%']);
   const monitorWorkloadOpacity = useTransform(monitorProgress, [0.55, 0.85], [0, 1]);
   const monitorWorkloadY = useTransform(monitorProgress, [0.55, 0.85], [40, 0]);
 
   // 3. Correlate Sticky Scroll Choreography (Pinned 260vh sequence)
   const { scrollYProgress: correlateProgress } = useScroll({
     target: correlateRef,
-    offset: ["start start", "end end"],
+    offset: ['start start', 'end end'],
   });
-  const dossierLeftX = useTransform(correlateProgress, [0.03, 0.26], ["-120%", "0%"]);
-  const dossierRightX = useTransform(correlateProgress, [0.03, 0.26], ["120%", "0%"]);
+  const dossierLeftX = useTransform(correlateProgress, [0.03, 0.26], ['-120%', '0%']);
+  const dossierRightX = useTransform(correlateProgress, [0.03, 0.26], ['120%', '0%']);
   const connectionLineProgress = useTransform(correlateProgress, [0.18, 0.38], [0, 1]);
   const similarityScoreScale = useTransform(correlateProgress, [0.34, 0.48], [0.5, 1]);
   const similarityScoreOpacity = useTransform(correlateProgress, [0.34, 0.46], [0, 1]);
@@ -85,54 +80,56 @@ export default function MaximalistHomepage() {
   // 4. Resolve Sticky Scroll Choreography (Pinned 240vh sequence)
   const { scrollYProgress: resolveProgress } = useScroll({
     target: resolveRef,
-    offset: ["start start", "end end"],
+    offset: ['start start', 'end end'],
   });
-  const resolveContentOpacity = useTransform(resolveProgress, [0.02, 0.12, 0.88, 0.98], [0, 1, 1, 0.1]);
+  const resolveContentOpacity = useTransform(
+    resolveProgress,
+    [0.02, 0.12, 0.88, 0.98],
+    [0, 1, 1, 0.1]
+  );
   const resolveEntranceY = useTransform(resolveProgress, [0.02, 0.12], [24, 0]);
-  const timelineSvgProgress = useTransform(resolveProgress, [0.10, 0.82], [0, 1]);
-  const milestone1Opacity = useTransform(resolveProgress, [0.10, 0.24], [0.2, 1]);
-  const milestone2Opacity = useTransform(resolveProgress, [0.24, 0.40], [0.2, 1]);
-  const milestone3Opacity = useTransform(resolveProgress, [0.40, 0.56], [0.2, 1]);
+  const timelineSvgProgress = useTransform(resolveProgress, [0.1, 0.82], [0, 1]);
+  const milestone1Opacity = useTransform(resolveProgress, [0.1, 0.24], [0.2, 1]);
+  const milestone2Opacity = useTransform(resolveProgress, [0.24, 0.4], [0.2, 1]);
+  const milestone3Opacity = useTransform(resolveProgress, [0.4, 0.56], [0.2, 1]);
   const milestone4Opacity = useTransform(resolveProgress, [0.56, 0.72], [0.2, 1]);
   const milestone5Opacity = useTransform(resolveProgress, [0.72, 0.86], [0.2, 1]);
 
   // Compute live overview metrics
   const totalComplaints = complaints.length;
   const activeCount = useMemo(
-    () => complaints.filter((c) => c.status !== "Resolved").length,
+    () => complaints.filter((c) => c.status !== 'Resolved').length,
     [complaints]
   );
   const criticalCount = useMemo(
-    () => complaints.filter((c) => c.priority === "Critical" && c.status !== "Resolved").length,
+    () => complaints.filter((c) => c.priority === 'Critical' && c.status !== 'Resolved').length,
     [complaints]
   );
 
   // Status breakdown for preview
   const statusCounts = useMemo(() => {
     return {
-      scrutiny: complaints.filter((c) => c.status === "Under Scrutiny").length,
-      assigned: complaints.filter((c) => c.status === "Assigned to Bureau").length,
+      scrutiny: complaints.filter((c) => c.status === 'Under Scrutiny').length,
+      assigned: complaints.filter((c) => c.status === 'Assigned to Bureau').length,
       proceedings: complaints.filter(
         (c) =>
-          c.status === "Show-Cause Notice Issued" ||
-          c.status === "Institution Response Received" ||
-          c.status === "Hearing Scheduled"
+          c.status === 'Show-Cause Notice Issued' ||
+          c.status === 'Institution Response Received' ||
+          c.status === 'Hearing Scheduled'
       ).length,
-      escalated: complaints.filter((c) => c.status === "Escalated").length,
-      resolved: complaints.filter((c) => c.status === "Resolved").length,
+      escalated: complaints.filter((c) => c.status === 'Escalated').length,
+      resolved: complaints.filter((c) => c.status === 'Resolved').length,
     };
   }, [complaints]);
 
   // Top critical cases for live intelligence preview
   const urgentCases = useMemo(() => {
-    return complaints
-      .filter((c) => c.priority === "Critical" || c.priority === "High")
-      .slice(0, 3);
+    return complaints.filter((c) => c.priority === 'Critical' || c.priority === 'High').slice(0, 3);
   }, [complaints]);
 
   // Featured overlap pair for Correlate section
   const featuredOverlap = useMemo(() => {
-    const pending = overlaps.find((o) => o.reviewStatus === "Pending") || overlaps[0];
+    const pending = overlaps.find((o) => o.reviewStatus === 'Pending') || overlaps[0];
     if (!pending) return null;
     const source = complaints.find((c) => c.id === pending.sourceComplaintId);
     const target = complaints.find((c) => c.id === pending.targetComplaintId);
@@ -160,7 +157,7 @@ export default function MaximalistHomepage() {
             linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
             linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)
           `,
-          backgroundSize: "60px 60px",
+          backgroundSize: '60px 60px',
         }}
         aria-hidden="true"
       />
@@ -218,6 +215,15 @@ export default function MaximalistHomepage() {
             </a>
             <span className="h-4 w-px bg-slate-800 mx-2" />
             <Link
+              href="/how-it-works"
+              className="px-3 py-2 rounded-lg text-blue-400 hover:text-white hover:bg-slate-800/70 transition-all font-semibold flex items-center gap-1.5"
+            >
+              <span>How It Works</span>
+              <span className="rounded bg-blue-500/10 border border-blue-500/30 px-1 py-0.2 text-[9px] font-mono font-bold text-blue-300">
+                ARCH
+              </span>
+            </Link>
+            <Link
               href="/complaints"
               className="px-3 py-2 rounded-lg hover:text-white hover:bg-slate-800/70 transition-all"
             >
@@ -243,7 +249,10 @@ export default function MaximalistHomepage() {
               className="group inline-flex items-center gap-2 rounded-xl bg-[#315EFB] px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white shadow-[0_2px_15px_rgba(49,94,251,0.4)] hover:bg-[#254EDB] transition-all hover:shadow-[0_4px_25px_rgba(49,94,251,0.6)] active:scale-98"
             >
               <span>Command Center</span>
-              <IconChevronDown size={14} className="group-hover:translate-y-0.5 transition-transform" />
+              <IconChevronDown
+                size={14}
+                className="group-hover:translate-y-0.5 transition-transform"
+              />
             </a>
           </div>
 
@@ -285,6 +294,16 @@ export default function MaximalistHomepage() {
             </a>
             <div className="pt-2 border-t border-slate-800 space-y-1">
               <Link
+                href="/how-it-works"
+                onClick={() => setMobileNavOpen(false)}
+                className="block px-3 py-2 rounded-md text-blue-400 hover:bg-slate-800 font-semibold flex items-center justify-between"
+              >
+                <span>How It Works</span>
+                <span className="rounded bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[10px] font-mono text-blue-300">
+                  ARCH &amp; FLOW
+                </span>
+              </Link>
+              <Link
                 href="/complaints"
                 onClick={() => setMobileNavOpen(false)}
                 className="block px-3 py-2 rounded-md text-slate-200 hover:bg-slate-800"
@@ -321,7 +340,7 @@ export default function MaximalistHomepage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 0.25, scale: 1 }}
-          transition={{ duration: 1.4, ease: "easeOut" }}
+          transition={{ duration: 1.4, ease: 'easeOut' }}
           style={{ scale: heroGridScale }}
           className="pointer-events-none absolute top-[-15%] right-[-10%] w-[850px] h-[850px] rounded-full blur-[160px]"
           aria-hidden="true"
@@ -388,7 +407,8 @@ export default function MaximalistHomepage() {
                 className="text-base sm:text-lg lg:text-xl leading-relaxed text-slate-300 font-normal max-w-2xl border-l-2 border-[#315EFB] pl-4 sm:pl-6"
               >
                 A unified intelligence platform for monitoring institutional grievances, identifying
-                overlapping complaints, and supporting transparent, evidence-led administrative decisions.
+                overlapping complaints, and supporting transparent, evidence-led administrative
+                decisions.
               </motion.p>
 
               {/* Directional Action Buttons */}
@@ -403,7 +423,10 @@ export default function MaximalistHomepage() {
                   className="group inline-flex items-center gap-3 rounded-xl bg-[#315EFB] px-6 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-[0_4px_25px_rgba(49,94,251,0.5)] hover:bg-[#254EDB] transition-all hover:scale-[1.02] active:scale-98"
                 >
                   <span>Explore Command Center</span>
-                  <IconArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
+                  <IconArrowRight
+                    size={16}
+                    className="group-hover:translate-x-1.5 transition-transform"
+                  />
                 </a>
 
                 <Link
@@ -411,7 +434,10 @@ export default function MaximalistHomepage() {
                   className="group inline-flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/90 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-200 hover:border-slate-400 hover:text-white transition-all shadow-xs"
                 >
                   <span>Review Complaints</span>
-                  <IconChevronRight size={15} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
+                  <IconChevronRight
+                    size={15}
+                    className="text-slate-400 group-hover:translate-x-1 transition-transform"
+                  />
                 </Link>
               </motion.div>
 
@@ -424,7 +450,8 @@ export default function MaximalistHomepage() {
               >
                 <IconCheckCircle size={14} className="text-[#10B981] shrink-0" />
                 <span>
-                  Demo System Active &bull; In-memory procedural records &bull; Advisory similarity matching
+                  Demo System Active &bull; In-memory procedural records &bull; Advisory similarity
+                  matching
                 </span>
               </motion.div>
             </div>
@@ -522,32 +549,44 @@ export default function MaximalistHomepage() {
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono">
                     <span className="text-slate-300">PROGRESSION SPLIT</span>
-                    <span className="text-slate-400">{activeCount} active / {statusCounts.resolved} closed</span>
+                    <span className="text-slate-400">
+                      {activeCount} active / {statusCounts.resolved} closed
+                    </span>
                   </div>
                   <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
                     <div
                       className="bg-[#315EFB]"
-                      style={{ width: `${Math.round((statusCounts.scrutiny / totalComplaints) * 100)}%` }}
+                      style={{
+                        width: `${Math.round((statusCounts.scrutiny / totalComplaints) * 100)}%`,
+                      }}
                       title={`Scrutiny: ${statusCounts.scrutiny}`}
                     />
                     <div
                       className="bg-indigo-500"
-                      style={{ width: `${Math.round((statusCounts.assigned / totalComplaints) * 100)}%` }}
+                      style={{
+                        width: `${Math.round((statusCounts.assigned / totalComplaints) * 100)}%`,
+                      }}
                       title={`Assigned: ${statusCounts.assigned}`}
                     />
                     <div
                       className="bg-amber-500"
-                      style={{ width: `${Math.round((statusCounts.proceedings / totalComplaints) * 100)}%` }}
+                      style={{
+                        width: `${Math.round((statusCounts.proceedings / totalComplaints) * 100)}%`,
+                      }}
                       title={`Proceedings: ${statusCounts.proceedings}`}
                     />
                     <div
                       className="bg-rose-500"
-                      style={{ width: `${Math.round((statusCounts.escalated / totalComplaints) * 100)}%` }}
+                      style={{
+                        width: `${Math.round((statusCounts.escalated / totalComplaints) * 100)}%`,
+                      }}
                       title={`Escalated: ${statusCounts.escalated}`}
                     />
                     <div
                       className="bg-emerald-500"
-                      style={{ width: `${Math.round((statusCounts.resolved / totalComplaints) * 100)}%` }}
+                      style={{
+                        width: `${Math.round((statusCounts.resolved / totalComplaints) * 100)}%`,
+                      }}
                       title={`Resolved: ${statusCounts.resolved}`}
                     />
                   </div>
@@ -570,9 +609,7 @@ export default function MaximalistHomepage() {
                         </span>
                         <PriorityBadge priority={c.priority} />
                       </div>
-                      <p className="mt-1 text-xs font-medium text-slate-200 truncate">
-                        {c.title}
-                      </p>
+                      <p className="mt-1 text-xs font-medium text-slate-200 truncate">{c.title}</p>
                     </Link>
                   ))}
                 </div>
@@ -617,7 +654,7 @@ export default function MaximalistHomepage() {
               >
                 <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 font-mono text-xs font-bold text-blue-300">
                   <span>01</span>
-                  <span>{"//"}</span>
+                  <span>{'//'}</span>
                   <span>UNIFIED GRIEVANCE TELEMETRY</span>
                 </div>
                 <h2 className="text-4xl sm:text-6xl font-black tracking-tighter uppercase leading-[0.9] text-white">
@@ -634,7 +671,8 @@ export default function MaximalistHomepage() {
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed text-slate-300">
-                  Scattered regional portals and individual inboxes are unified into structured digital dossiers with real-time jurisdictional telemetry.
+                  Scattered regional portals and individual inboxes are unified into structured
+                  digital dossiers with real-time jurisdictional telemetry.
                 </p>
                 <div className="pt-2">
                   <Link
@@ -650,10 +688,7 @@ export default function MaximalistHomepage() {
               {/* Right Column: Sliding Complaint Records & Bureau Workload */}
               <div className="lg:col-span-7 space-y-5">
                 {/* Cascade Cards entering on scroll */}
-                <motion.div
-                  style={{ x: monitorCardsX }}
-                  className="space-y-3"
-                >
+                <motion.div style={{ x: monitorCardsX }} className="space-y-3">
                   <span className="block font-mono text-xs font-bold text-slate-400 uppercase tracking-wider">
                     CURRENT INTAKE STREAM (SCROLL-SYNCHRONIZED)
                   </span>
@@ -664,9 +699,7 @@ export default function MaximalistHomepage() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-blue-400">
-                            {c.id}
-                          </span>
+                          <span className="font-mono text-xs font-bold text-blue-400">{c.id}</span>
                           <PriorityBadge priority={c.priority} />
                           <StatusBadge status={c.status} />
                         </div>
@@ -674,9 +707,7 @@ export default function MaximalistHomepage() {
                           Due: {c.deadlineDate}
                         </span>
                       </div>
-                      <p className="text-xs font-bold text-slate-100 line-clamp-1">
-                        {c.title}
-                      </p>
+                      <p className="text-xs font-bold text-slate-100 line-clamp-1">{c.title}</p>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400">
                         <IconBuilding size={12} className="text-slate-400" />
                         <span className="truncate">{c.institutionName}</span>
@@ -701,11 +732,11 @@ export default function MaximalistHomepage() {
                   </div>
                   <div className="space-y-2.5">
                     {[
-                      { name: "Approval Bureau", load: 3 },
-                      { name: "Anti-Ragging Cell", load: 2 },
-                      { name: "Faculty Development Cell", load: 2 },
-                      { name: "Student Grievance Cell", load: 2 },
-                      { name: "Finance & Legal Cell", load: 1 },
+                      { name: 'Approval Bureau', load: 3 },
+                      { name: 'Anti-Ragging Cell', load: 2 },
+                      { name: 'Faculty Development Cell', load: 2 },
+                      { name: 'Student Grievance Cell', load: 2 },
+                      { name: 'Finance & Legal Cell', load: 1 },
                     ].map((b) => (
                       <div key={b.name} className="space-y-1">
                         <div className="flex items-center justify-between text-[11px]">
@@ -751,7 +782,8 @@ export default function MaximalistHomepage() {
                 <span className="text-indigo-400">THAT MATTER.</span>
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-                Parallel grievances filed across different channels are correlated across named entities, institutional IDs, and narrative semantics.
+                Parallel grievances filed across different channels are correlated across named
+                entities, institutional IDs, and narrative semantics.
               </p>
             </div>
 
@@ -774,7 +806,7 @@ export default function MaximalistHomepage() {
                         </span>
                       </div>
                       <h3 className="text-sm font-bold text-white line-clamp-1 mt-2">
-                        {featuredOverlap.source?.title || "Primary Complaint"}
+                        {featuredOverlap.source?.title || 'Primary Complaint'}
                       </h3>
                       <p className="text-xs text-slate-300 line-clamp-2 mt-1 leading-relaxed">
                         {featuredOverlap.source?.description}
@@ -801,7 +833,7 @@ export default function MaximalistHomepage() {
                         </span>
                       </div>
                       <h3 className="text-sm font-bold text-white line-clamp-1 mt-2">
-                        {featuredOverlap.target?.title || "Correlated Complaint"}
+                        {featuredOverlap.target?.title || 'Correlated Complaint'}
                       </h3>
                       <p className="text-xs text-slate-300 line-clamp-2 mt-1 leading-relaxed">
                         {featuredOverlap.target?.description}
@@ -877,7 +909,9 @@ export default function MaximalistHomepage() {
                       <span>STATUTORY HUMAN-IN-THE-LOOP MANDATE</span>
                     </div>
                     <p className="text-[11px] leading-relaxed text-slate-300 max-w-xl mx-auto">
-                      Similarity scores are advisory. Directives to link, consolidate, or dismiss candidate pairs require explicit human adjudication. Records are never automatically merged or deleted.
+                      Similarity scores are advisory. Directives to link, consolidate, or dismiss
+                      candidate pairs require explicit human adjudication. Records are never
+                      automatically merged or deleted.
                     </p>
                     <div className="pt-1">
                       <Link
@@ -919,23 +953,20 @@ export default function MaximalistHomepage() {
                 <span className="text-emerald-400">ACCOUNTABLE ACTION.</span>
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-                Every grievance adheres to statutory procedural milestones, ending with an immutable tamper-evident audit record.
+                Every grievance adheres to statutory procedural milestones, ending with an immutable
+                tamper-evident audit record.
               </p>
             </div>
 
             {/* Connecting Timeline SVG & 5 Procedural Milestones */}
             <div className="relative">
               {/* Animated Progress Connecting Line */}
-              <div className="hidden md:block absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1 z-0 px-8" aria-hidden="true">
+              <div
+                className="hidden md:block absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1 z-0 px-8"
+                aria-hidden="true"
+              >
                 <svg className="w-full h-4 overflow-visible">
-                  <line
-                    x1="0"
-                    y1="8"
-                    x2="100%"
-                    y2="8"
-                    stroke="#1E293B"
-                    strokeWidth="3"
-                  />
+                  <line x1="0" y1="8" x2="100%" y2="8" stroke="#1E293B" strokeWidth="3" />
                   <motion.line
                     x1="0"
                     y1="8"
@@ -952,38 +983,38 @@ export default function MaximalistHomepage() {
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3 sm:gap-4 relative z-10">
                 {[
                   {
-                    step: "01",
-                    title: "Intake & Scrutiny",
-                    desc: "Digital intake verification, jurisdiction validation, and preliminary triage.",
-                    status: "Logged",
+                    step: '01',
+                    title: 'Intake & Scrutiny',
+                    desc: 'Digital intake verification, jurisdiction validation, and preliminary triage.',
+                    status: 'Logged',
                     opacity: milestone1Opacity,
                   },
                   {
-                    step: "02",
-                    title: "Bureau Allocation",
-                    desc: "Assignment to specialized apex cell (Anti-Ragging, Approval, Faculty, etc.).",
-                    status: "Assigned",
+                    step: '02',
+                    title: 'Bureau Allocation',
+                    desc: 'Assignment to specialized apex cell (Anti-Ragging, Approval, Faculty, etc.).',
+                    status: 'Assigned',
                     opacity: milestone2Opacity,
                   },
                   {
-                    step: "03",
-                    title: "Show-Cause Notice",
-                    desc: "Issuance of formal notice to institution with statutory response window.",
-                    status: "Notice Issued",
+                    step: '03',
+                    title: 'Show-Cause Notice',
+                    desc: 'Issuance of formal notice to institution with statutory response window.',
+                    status: 'Notice Issued',
                     opacity: milestone3Opacity,
                   },
                   {
-                    step: "04",
-                    title: "Evidentiary Hearing",
-                    desc: "Convening of hearing committee, submission of defense, or escalation.",
-                    status: "Hearing",
+                    step: '04',
+                    title: 'Evidentiary Hearing',
+                    desc: 'Convening of hearing committee, submission of defense, or escalation.',
+                    status: 'Hearing',
                     opacity: milestone4Opacity,
                   },
                   {
-                    step: "05",
-                    title: "Final Order & Audit",
-                    desc: "Administrative determination logged to immutable tamper-evident trail.",
-                    status: "Resolved",
+                    step: '05',
+                    title: 'Final Order & Audit',
+                    desc: 'Administrative determination logged to immutable tamper-evident trail.',
+                    status: 'Resolved',
                     opacity: milestone5Opacity,
                   },
                 ].map((item) => (
@@ -1049,7 +1080,8 @@ export default function MaximalistHomepage() {
                 COMMAND CENTER.
               </h2>
               <p className="text-xs sm:text-sm font-medium text-[#5A6474] max-w-2xl">
-                Direct operational access to active dossiers, statutory deadlines, bureau workloads, and triage queues. Connected in real-time to the central intelligence session.
+                Direct operational access to active dossiers, statutory deadlines, bureau workloads,
+                and triage queues. Connected in real-time to the central intelligence session.
               </p>
             </div>
 

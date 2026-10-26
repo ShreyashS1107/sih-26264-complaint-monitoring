@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { IconMenu, IconSearch, IconShield, IconX } from "../ui/icons";
-import { Badge } from "../ui/badge";
-import { useComplaints } from "../../lib/context/complaint-context";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { IconCpu, IconMenu, IconSearch, IconShield, IconX } from '../ui/icons';
+import { Badge } from '../ui/badge';
+import { useComplaints } from '../../lib/context/complaint-context';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -17,61 +18,68 @@ interface PageMeta {
 }
 
 function getPageMeta(pathname: string): PageMeta {
-  if (pathname === "/") {
+  if (pathname === '/') {
     return {
-      title: "Overview Dashboard",
-      subtitle: "Institutional grievance intake metrics and operational alerts",
-      breadcrumb: ["AICTE Intelligence", "Overview"],
+      title: 'Overview Dashboard',
+      subtitle: 'Institutional grievance intake metrics and operational alerts',
+      breadcrumb: ['AICTE Intelligence', 'Overview'],
     };
   }
-  if (pathname === "/complaints") {
+  if (pathname === '/complaints') {
     return {
-      title: "Complaint Registry",
-      subtitle: "Search, filter, and inspect institutional grievance dossiers",
-      breadcrumb: ["AICTE Intelligence", "Complaints"],
+      title: 'Complaint Registry',
+      subtitle: 'Search, filter, and inspect institutional grievance dossiers',
+      breadcrumb: ['AICTE Intelligence', 'Complaints'],
     };
   }
-  if (pathname.startsWith("/complaints/")) {
-    const id = pathname.split("/")[2] || "";
+  if (pathname.startsWith('/complaints/')) {
+    const id = pathname.split('/')[2] || '';
     return {
-      title: id ? `Dossier ${id}` : "Complaint Dossier",
-      subtitle: "Case inspection, evidence review, and administrative action dispatch",
-      breadcrumb: ["AICTE Intelligence", "Complaints", id || "Detail"],
+      title: id ? `Dossier ${id}` : 'Complaint Dossier',
+      subtitle: 'Case inspection, evidence review, and administrative action dispatch',
+      breadcrumb: ['AICTE Intelligence', 'Complaints', id || 'Detail'],
     };
   }
-  if (pathname === "/overlap-review") {
+  if (pathname === '/overlap-review') {
     return {
-      title: "Overlap Review Queue",
-      subtitle: "Multi-signal candidate correlations awaiting human adjudication",
-      breadcrumb: ["AICTE Intelligence", "Overlap Review"],
+      title: 'Overlap Review Queue',
+      subtitle: 'Multi-signal candidate correlations awaiting human adjudication',
+      breadcrumb: ['AICTE Intelligence', 'Overlap Review'],
     };
   }
-  if (pathname.startsWith("/overlap-review/compare")) {
+  if (pathname.startsWith('/overlap-review/compare')) {
     return {
-      title: "Side-by-Side Adjudication",
-      subtitle: "Clause-by-clause case comparison with human verdict recording",
-      breadcrumb: ["AICTE Intelligence", "Overlap Review", "Compare"],
+      title: 'Side-by-Side Adjudication',
+      subtitle: 'Clause-by-clause case comparison with human verdict recording',
+      breadcrumb: ['AICTE Intelligence', 'Overlap Review', 'Compare'],
     };
   }
-  if (pathname === "/analytics") {
+  if (pathname === '/analytics') {
     return {
-      title: "Analytics & Bureau Trends",
-      subtitle: "Workload distribution, category patterns, and SLA compliance",
-      breadcrumb: ["AICTE Intelligence", "Analytics"],
+      title: 'Analytics & Bureau Trends',
+      subtitle: 'Workload distribution, category patterns, and SLA compliance',
+      breadcrumb: ['AICTE Intelligence', 'Analytics'],
     };
   }
-  if (pathname === "/audit-trail") {
+  if (pathname === '/audit-trail') {
     return {
-      title: "System Audit Trail",
-      subtitle: "Chronological accountability log of administrative actions",
-      breadcrumb: ["AICTE Intelligence", "Audit Trail"],
+      title: 'System Audit Trail',
+      subtitle: 'Chronological accountability log of administrative actions',
+      breadcrumb: ['AICTE Intelligence', 'Audit Trail'],
+    };
+  }
+  if (pathname === '/how-it-works') {
+    return {
+      title: 'System Architecture & Workflow',
+      subtitle: 'AICTE SIH26264 methodology, lifecycle, overlap engine & data model',
+      breadcrumb: ['AICTE Intelligence', 'How It Works'],
     };
   }
 
   return {
-    title: "AICTE Portal",
-    subtitle: "Institutional complaint monitoring and tracking",
-    breadcrumb: ["AICTE Intelligence"],
+    title: 'AICTE Portal',
+    subtitle: 'Institutional complaint monitoring and tracking',
+    breadcrumb: ['AICTE Intelligence'],
   };
 }
 
@@ -79,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { backendStatus, isLoading, currentOfficer } = useComplaints();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const meta = getPageMeta(pathname);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -104,11 +112,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
         <div className="min-w-0">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-[11px] text-[#697386]" aria-label="Breadcrumb">
+          <nav
+            className="flex items-center gap-1.5 text-[11px] text-[#697386]"
+            aria-label="Breadcrumb"
+          >
             {meta.breadcrumb.map((crumb, idx) => (
               <React.Fragment key={crumb}>
                 {idx > 0 && <span className="text-slate-300">/</span>}
-                <span className={idx === meta.breadcrumb.length - 1 ? "font-semibold text-[#172033] truncate" : "truncate"}>
+                <span
+                  className={
+                    idx === meta.breadcrumb.length - 1
+                      ? 'font-semibold text-[#172033] truncate'
+                      : 'truncate'
+                  }
+                >
                   {crumb}
                 </span>
               </React.Fragment>
@@ -138,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery("")}
+              onClick={() => setSearchQuery('')}
               className="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400 hover:text-slate-600"
               aria-label="Clear search input"
             >
@@ -147,19 +164,42 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           )}
         </form>
 
+        {/* How It Works Link */}
+        <Link
+          href="/how-it-works"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] px-2.5 py-1.5 text-xs font-semibold text-[#172033] hover:border-[#315EFB]/40 hover:bg-[#315EFB]/5 hover:text-[#315EFB] transition-all shadow-2xs"
+          title="Explain System Architecture and Methodology"
+        >
+          <IconCpu size={14} className="text-[#315EFB]" />
+          <span>How It Works</span>
+        </Link>
+
         {/* Live Backend / Demo environment pill */}
         {isLoading ? (
-          <Badge variant="neutral" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs">
+          <Badge
+            variant="neutral"
+            size="sm"
+            className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
             <span>Syncing API...</span>
           </Badge>
-        ) : backendStatus === "connected" ? (
-          <Badge variant="success" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs">
+        ) : backendStatus === 'connected' ? (
+          <Badge
+            variant="success"
+            size="sm"
+            className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             <span>API Live</span>
           </Badge>
         ) : (
-          <Badge variant="warning" size="sm" className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs" title="PostgreSQL database offline — operating on seed data">
+          <Badge
+            variant="warning"
+            size="sm"
+            className="hidden sm:inline-flex gap-1.5 items-center font-medium shadow-2xs"
+            title="PostgreSQL database offline — operating on seed data"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
             <span>DB Offline (Seed Data)</span>
           </Badge>
@@ -172,10 +212,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
           <div className="hidden xl:block text-left">
             <span className="block text-xs font-bold text-[#172033] leading-none">
-              {currentOfficer?.name || "Dr. S. K. Rao"}
+              {currentOfficer?.name || 'Dr. S. K. Rao'}
             </span>
             <span className="block text-[10px] font-medium text-[#697386] leading-none mt-1">
-              {currentOfficer?.bureau?.name || (currentOfficer?.role === "CENTRAL_ADMIN" ? "Central Administration" : "Apex Scrutiny Cell")}
+              {currentOfficer?.bureau?.name ||
+                (currentOfficer?.role === 'CENTRAL_ADMIN'
+                  ? 'Central Administration'
+                  : 'Apex Scrutiny Cell')}
             </span>
           </div>
         </div>

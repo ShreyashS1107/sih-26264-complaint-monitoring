@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
   size?: number | string;
@@ -9,24 +9,24 @@ export interface IconProps extends React.SVGProps<SVGSVGElement> {
 const defaultProps = {
   width: 18,
   height: 18,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
   strokeWidth: 2,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
 };
 
 function prepareProps(props: IconProps) {
-  const { size, label, className = "", ...rest } = props;
+  const { size, label, className = '', ...rest } = props;
   return {
     ...defaultProps,
     width: size ?? defaultProps.width,
     height: size ?? defaultProps.height,
     className: `inline-block shrink-0 ${className}`.trim(),
-    "aria-hidden": label ? undefined : true,
-    role: label ? "img" : undefined,
-    "aria-label": label,
+    'aria-hidden': label ? undefined : true,
+    role: label ? 'img' : undefined,
+    'aria-label': label,
     ...rest,
   };
 }
@@ -211,3 +211,33 @@ export const IconBarChart: React.FC<IconProps> = (props) => (
   </svg>
 );
 
+export const IconCpu: React.FC<IconProps> = (props) => (
+  <svg {...prepareProps(props)}>
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+    <rect x="9" y="9" width="6" height="6" />
+    <line x1="9" y1="1" x2="9" y2="4" />
+    <line x1="15" y1="1" x2="15" y2="4" />
+    <line x1="9" y1="20" x2="9" y2="23" />
+    <line x1="15" y1="20" x2="15" y2="23" />
+    <line x1="20" y1="9" x2="23" y2="9" />
+    <line x1="20" y1="14" x2="23" y2="14" />
+    <line x1="1" y1="9" x2="4" y2="9" />
+    <line x1="1" y1="14" x2="4" y2="14" />
+  </svg>
+);
+
+export const IconInfo: React.FC<IconProps> = (props) => (
+  <svg {...prepareProps(props)}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+
+export const IconPrinter: React.FC<IconProps> = (props) => (
+  <svg {...prepareProps(props)}>
+    <polyline points="6 9 6 2 18 2 18 9" />
+    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <rect x="6" y="14" width="12" height="8" />
+  </svg>
+);

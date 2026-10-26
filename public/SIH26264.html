@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIH26264 – Complaint Monitoring Dashboard Explainer</title>
+<style>
+/* ===== Tokens ===== */
+:root{--navy:#0b1f3a;--navy2:#13335c;--teal:#0fa3a3;--teald:#0a7777;--bg:#f2f5f7;--card:#fff;--line:#d9e1e7;--ink:#17212b;--mute:#566574;--warn:#b45309;--ok:#15803d;--bad:#b91c1c;--r:12px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--teald)}:focus-visible{outline:3px solid #f5b301;outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+/* ===== Header / hero ===== */
+header.hero{background:var(--navy);color:#fff;padding:48px 0 36px}
+header.hero h1{font-size:clamp(1.5rem,3.4vw,2.3rem);line-height:1.25;margin:0 0 12px;max-width:860px}
+header.hero p{color:#c6d4e3;max-width:760px;margin:0 0 20px}
+.pipe{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 0;padding:0;list-style:none}
+.pipe li{background:var(--navy2);border:1px solid #2b4d7a;border-radius:20px;padding:4px 12px;font-size:.78rem}
+.pipe li:not(:last-child)::after{content:"›";margin-left:10px;color:var(--teal)}
+.note{border-left:4px solid var(--teal);background:#e6f6f6;padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:.93rem}
+.note.warn{border-color:var(--warn);background:#fdf3e3}
+/* ===== Sticky nav ===== */
+nav.top{position:sticky;top:0;z-index:20;background:var(--navy);border-top:1px solid #234;box-shadow:0 2px 6px #0003}
+nav.top .wrap{display:flex;gap:4px;align-items:center;overflow-x:auto;padding-top:8px;padding-bottom:8px}
+nav.top a{color:#dce8f3;text-decoration:none;font-size:.82rem;padding:5px 9px;border-radius:6px;white-space:nowrap}
+nav.top a:hover{background:var(--navy2)}
+.ctl{margin-left:auto;display:flex;gap:6px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--teal);color:#032;border:0;border-radius:8px;padding:6px 12px;font-size:.82rem;font-weight:600;white-space:nowrap}
+.btn.alt{background:transparent;color:#fff;border:1px solid #4d6f9c}.btn[aria-pressed=true]{background:#fff;color:var(--navy)}
+.btn.dark{background:var(--navy);color:#fff}
+/* ===== Sections / cards ===== */
+section{padding:40px 0 8px}h2{margin:0 0 6px;font-size:1.55rem}.lead{color:var(--mute);margin:0 0 18px;max-width:760px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid}
+.t-v{color:var(--warn);background:#fdf3e3;border-color:#f0c98b}.t-p{color:#475569;background:#eef1f4;border-color:#c5cdd5}.t-i{color:#6d28d9;background:#f1ebfd;border-color:#cdb9f5}
+.scroll{overflow-x:auto}.scroll svg{min-width:720px;width:100%;height:auto;display:block}
+body.simple .adv{display:none}
+.adv{margin-top:10px;padding:10px 14px;background:#f7fafb;border:1px dashed var(--line);border-radius:8px;font-size:.92rem}
+table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}th{background:#eef3f6}
+/* ===== Stage chips & step controls ===== */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.85rem}
+.chip[aria-selected=true]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.steps{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.cmp{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.9rem}
+/* ===== Score bars ===== */
+.bar{display:grid;grid-template-columns:150px 1fr 90px;gap:8px;align-items:center;margin:6px 0;font-size:.88rem}
+.bar i{display:block;height:14px;background:var(--teal);border-radius:7px;transition:width .5s}.bar div{background:#e3eaef;border-radius:7px}
+.thr{display:flex;height:30px;border-radius:8px;overflow:hidden;font-size:.78rem;color:#fff;text-align:center;line-height:30px}
+.thr span:nth-child(1){flex:45;background:#64748b}.thr span:nth-child(2){flex:20;background:#d97706}.thr span:nth-child(3){flex:35;background:#b91c1c}
+.dash{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi{background:#f7fafb;border:1px solid var(--line);border-radius:8px;padding:10px}.kpi b{font-size:1.5rem;display:block}
+footer{padding:30px 0 50px;color:var(--mute);font-size:.88rem}
+/* ===== Motion ===== */
+.flow{stroke-dasharray:6 6;animation:dash 1.2s linear infinite}@keyframes dash{to{stroke-dashoffset:-24}}
+.paused .flow,.paused .dot{animation-play-state:paused}
+.dot{animation:mv 5s linear infinite}@keyframes mv{from{transform:translateX(0)}to{transform:translateX(250px)}}
+@media (prefers-reduced-motion:reduce){.flow,.dot{animation:none}html{scroll-behavior:auto}.bar i{transition:none}}
+@media (max-width:600px){.bar{grid-template-columns:100px 1fr 60px}.ctl{margin-left:8px}}
+@media print{nav.top,.ctl,.steps,.btn{display:none!important}body.simple .adv{display:block}body{background:#fff}.card{break-inside:avoid}.flow,.dot{animation:none}header.hero{background:#fff;color:#000}header.hero p{color:#333}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+ <h1>Integrated Dashboard for Monitoring and Tracking Institution-Related Complaint Cases Across AICTE Bureaus/Cells</h1>
+ <p>An integrated complaint-management and monitoring system that helps organize institution-related complaints, identify potentially overlapping cases, support human review, and track case progress.</p>
+ <ul class="pipe" aria-label="Pipeline"><li>Complaint registration</li><li>Data validation</li><li>Overlap detection</li><li>Human review</li><li>Case tracking</li><li>Dashboard</li></ul>
+ <div class="scroll" style="margin-top:20px"><svg viewBox="0 0 760 130" role="img" aria-label="Complaints flow into an analysis engine, then to a review and monitoring dashboard">
+  <rect x="10" y="30" width="150" height="70" rx="10" fill="#13335c" stroke="#2b4d7a"/><text x="85" y="70" fill="#fff" font-size="14" text-anchor="middle">Complaints in</text>
+  <rect x="305" y="30" width="150" height="70" rx="10" fill="#0a7777"/><text x="380" y="62" fill="#fff" font-size="14" text-anchor="middle">Overlap engine</text><text x="380" y="82" fill="#d6f3f3" font-size="11" text-anchor="middle">flags candidates only</text>
+  <rect x="600" y="30" width="150" height="70" rx="10" fill="#13335c" stroke="#2b4d7a"/><text x="675" y="62" fill="#fff" font-size="14" text-anchor="middle">Review &amp; monitoring</text><text x="675" y="82" fill="#c6d4e3" font-size="11" text-anchor="middle">humans decide</text>
+  <line class="flow" x1="160" y1="65" x2="305" y2="65" stroke="#0fa3a3" stroke-width="3"/><line class="flow" x1="455" y1="65" x2="600" y2="65" stroke="#0fa3a3" stroke-width="3"/>
+  <circle class="dot" cx="165" cy="65" r="6" fill="#f5b301"/></svg></div>
+ <div class="note" style="color:#12304f"><b>Key idea:</b> the engine identifies <i>potential overlaps</i>. It never concludes that two complaints are duplicates, and it never merges them.</div>
+</div></header>
+
+<nav class="top" aria-label="Sections"><div class="wrap">
+ <a href="#problem">Problem</a><a href="#arch">Architecture</a><a href="#lifecycle">Lifecycle</a><a href="#engine">Engine</a><a href="#example">Example</a><a href="#review">Review</a><a href="#data">Data</a><a href="#dash">Dashboard</a><a href="#trust">Trust</a><a href="#stack">Stack</a><a href="#status">Status</a>
+ <span class="ctl"><button class="btn alt" id="simpleBtn" aria-pressed="false">Simple overview</button><button class="btn alt" id="pauseBtn" aria-pressed="false">Pause animation</button><button class="btn" id="printBtn">Print / PDF</button></span>
+</div></nav>
+
+<main class="wrap">
+<div class="note warn" style="margin-top:20px"><b>Source note:</b> This page was generated from the project brief only. The repository and reference file were not inspected, so implementation status, enum names and field lists marked <span class="tag t-v">Requires verification</span> must be checked against <code>prisma/schema.prisma</code> and <code>src/modules/overlap-detection/</code> before presenting.</div>
+
+<!-- ===== B: Problem ===== -->
+<section id="problem"><h2>The problem we are solving</h2><p class="lead">Institutions attract many complaints. Handling them one by one hides patterns.</p>
+<div class="grid"><div class="card"><b>Challenges</b><ul><li>Large complaint volumes</li><li>Several people reporting the same underlying issue</li><li>Similar complaints worded differently</li><li>Hard to find related records</li><li>Hard to track status and actions</li><li>Limited visibility across bureaus or cells</li></ul></div>
+<div class="card"><b>Manual process vs integrated system</b><table><tr><th>Manual</th><th>Proposed</th></tr><tr><td>Search records by hand</td><td>Engine suggests candidates</td></tr><tr><td>Scattered status</td><td>Central dashboard</td></tr><tr><td>Per-bureau view</td><td>Cross-bureau view</td></tr></table><p class="adv">No measured improvement is claimed; no verified results exist yet.</p></div></div></section>
+
+<!-- ===== C: Architecture ===== -->
+<section id="arch"><h2>System architecture</h2><p class="lead">Select a layer to see what it does. Data moves top to bottom.</p>
+<div class="card"><div class="chips" role="tablist" aria-label="Layers" id="archChips"></div><div id="archOut" aria-live="polite"></div></div></section>
+
+<!-- ===== D: Lifecycle ===== -->
+<section id="lifecycle"><h2>Complaint lifecycle</h2><p class="lead">Two separate lifecycles run side by side: the complaint itself, and the overlap review. Confirming an overlap does not resolve a complaint.</p>
+<div class="card"><div class="chips" role="tablist" aria-label="Stages" id="lifeChips"></div><div id="lifeOut" aria-live="polite"></div></div></section>
+
+<!-- ===== E: Engine ===== -->
+<section id="engine"><h2>The overlap-detection engine</h2><p class="lead">It compares a complaint with eligible existing ones and combines four signals into a heuristic score.</p>
+<div class="grid"><div class="card"><b>Signals and weights</b><table><tr><th>Signal</th><th>Weight</th></tr><tr><td>Institution matching</td><td>0.35</td></tr><tr><td>Complaint subject similarity</td><td>0.40</td></tr><tr><td>Temporal relationship</td><td>0.15</td></tr><tr><td>Complainant matching</td><td>0.10</td></tr></table>
+<div class="adv"><b>Technical:</b> Institution uses the AICTE Permanent ID as a strong signal, with name/location fallback. Subject similarity uses tokenization, stemming, cosine similarity and bigram Jaccard similarity. Time uses a 90-day half-life within a configured date window. Complainant matching uses masked identifiers and complainant type. Weighted signals are combined into one score; no other coefficients are stated here.</div></div>
+<div class="card"><b>Classification vs candidate threshold</b><div class="thr" role="img" aria-label="Low below 0.45, Medium 0.45 to 0.65, High 0.65 and above"><span>Low &lt; 0.45</span><span>Medium</span><span>High ≥ 0.65</span></div>
+<p>Medium: 0.45 ≤ score &lt; 0.65. The default <b>candidate-generation threshold is 0.45</b>, so Medium and High scores become candidates. Low scores do not.</p>
+<p class="tag t-i">Illustrative only: hypothetical values</p><div id="bars"></div></div></div>
+<div class="note warn"><b>Limitations:</b> scores are heuristic signals, not calibrated probabilities. High does not prove duplication; low does not prove independence. Missing or invalid data affects individual signals. Human review is necessary and the engine must not auto-merge.</div></section>
+
+<!-- ===== F: Example ===== -->
+<section id="example"><h2>Example: two complaints, one potential overlap</h2><p class="lead">Fictional data. Use Previous and Next.</p>
+<div class="card"><div class="grid"><div class="cmp"><b>C-101 · Day 1</b><br>ABC Engineering College<br>“My college has not refunded my examination fee despite several requests.”</div><div class="cmp"><b>C-205 · Day 5</b><br>ABC Engineering College<br>“ABC Engineering College is refusing to return the examination fees collected from students.”</div></div>
+<h3 id="exTitle"></h3><p id="exText" aria-live="polite"></p><p class="tag t-i" id="exScore" hidden>Illustrative only — not an actual engine result. Fictional score: 0.72 (High band)</p>
+<div class="steps"><button class="btn dark" id="prev">Previous</button><button class="btn dark" id="next">Next</button><span id="exCount"></span></div></div></section>
+
+<!-- ===== G: Review ===== -->
+<section id="review"><h2>Manual review and decision integrity</h2><p class="lead">The engine recommends. An authorized reviewer decides.</p>
+<div class="grid"><div class="card"><b>Engine recommends</b><p>“These two complaints may concern the same issue.” Score and evidence are shown.</p></div><div class="card"><b>Reviewer decides</b><p>Pending review → confirmed overlap, or dismissed as independent.</p><span class="tag t-v">Requires verification: exact enum names in schema</span></div></div>
+<div class="note">Rescoring is designed to preserve human decisions, with concurrency safeguards around candidate updates. Confirming an overlap does not merge, delete or resolve any complaint.</div></section>
+
+<!-- ===== H: Data ===== -->
+<section id="data"><h2>Database and data model</h2><p class="lead">Seven entities are expected in the Prisma schema. <span class="tag t-v">Requires verification: fields and relations</span></p>
+<div class="card scroll"><svg viewBox="0 0 760 230" role="img" aria-label="Conceptual entity diagram">
+<g font-size="13" text-anchor="middle"><g fill="#fff" stroke="#0a7777" stroke-width="2"><rect x="20" y="20" width="130" height="40" rx="8"/><rect x="20" y="95" width="130" height="40" rx="8"/><rect x="315" y="20" width="130" height="40" rx="8"/><rect x="315" y="95" width="130" height="40" rx="8"/><rect x="315" y="170" width="130" height="40" rx="8"/><rect x="610" y="20" width="130" height="40" rx="8"/><rect x="610" y="95" width="130" height="40" rx="8"/></g>
+<g fill="#17212b"><text x="85" y="45">Institution</text><text x="85" y="120">Bureau</text><text x="380" y="45">Complaint</text><text x="380" y="120">CaseAction</text><text x="380" y="195">OverlapCandidate</text><text x="675" y="45">Officer</text><text x="675" y="120">AuditLog</text></g></g>
+<g stroke="#64748b" stroke-width="2" stroke-dasharray="5 4" fill="none"><line x1="150" y1="40" x2="315" y2="40"/><line x1="150" y1="115" x2="315" y2="50"/><line x1="380" y1="60" x2="380" y2="95"/><line x1="380" y1="135" x2="380" y2="170"/><line x1="445" y1="40" x2="610" y2="40"/><line x1="445" y1="115" x2="610" y2="115"/></g>
+<text x="380" y="226" font-size="11" text-anchor="middle" fill="#566574">Dashed lines = conceptual links, not confirmed cardinalities</text></svg>
+<div class="grid"><div class="cmp"><b>PostgreSQL</b> stores relational data.</div><div class="cmp"><b>Prisma</b> accesses it from TypeScript.</div><div class="cmp"><b>Zod</b> validates inputs at runtime where used.</div><div class="cmp"><b>TypeScript</b> types the application.</div></div></div></section>
+
+<!-- ===== I: Dashboard ===== -->
+<section id="dash"><h2>Dashboard concept</h2><p class="lead"><span class="tag t-i">Fictional sample data</span> <span class="tag t-v">Backend connection requires verification</span></p>
+<div class="card"><div class="dash"><div class="kpi"><b>248</b>Total complaints</div><div class="kpi"><b>61</b>Pending</div><div class="kpi"><b>37</b>Under review</div><div class="kpi"><b>14</b>Potential overlaps</div><div class="kpi"><b>9 / 5</b>Confirmed / dismissed</div></div>
+<p><b>Status mix (sample)</b></p><div class="thr" aria-label="Sample status mix"><span style="flex:25;background:#d97706">Pending</span><span style="flex:15;background:#0a7777">Review</span><span style="flex:60;background:#15803d">Closed</span></div>
+<p><b>Bureau workload (sample)</b></p><div id="wl"></div></div></section>
+
+<!-- ===== J: Trust ===== -->
+<section id="trust"><h2>Security, reliability, trust</h2><div class="grid"><div class="card"><b>Design intent</b><ul><li>Human review instead of automatic merging</li><li>Adjudicated decisions preserved during rescoring</li><li>Concurrency safeguards on candidate updates</li><li>Database constraints and conflict handling</li><li>Typed data and input validation where implemented</li></ul></div><div class="card"><b>Not claimed</b><p>Authentication, access control, encryption, certifications, production readiness and full audit coverage are <span class="tag t-v">Requires verification</span>. Audit logging is only claimed where implemented.</p></div></div></section>
+
+<!-- ===== K: Stack ===== -->
+<section id="stack"><h2>Technology stack</h2><div class="grid"><div class="card"><b>Next.js</b><br>Web framework</div><div class="card"><b>React</b><br>User interface</div><div class="card"><b>TypeScript</b><br>Typed code</div><div class="card"><b>PostgreSQL</b><br>Data storage</div><div class="card"><b>Prisma</b><br>ORM</div><div class="card"><b>Zod</b><br>Validation</div><div class="card"><b>Vitest</b><br>Tests</div><div class="card"><b>ESLint + Prettier</b><br>Code quality</div></div></section>
+
+<!-- ===== L: Status ===== -->
+<section id="status"><h2>Scope and implementation status</h2><p class="lead">A database model does not mean its API, screen or workflow is complete.</p>
+<div class="grid"><div class="card"><b>Implemented</b><p>Overlap-detection module with unit and integration tests (per brief).</p></div><div class="card"><b>In progress</b><p><span class="tag t-v">Requires verification</span></p></div><div class="card"><b>Planned / integration pending</b><ul><li>Registration connected to the engine</li><li>Review APIs</li><li>Backend data in dashboard views</li><li>Remaining complaint workflows</li></ul><span class="tag t-v">Confirm each against the repository</span></div></div></section>
+</main>
+<footer><div class="wrap">SIH26264 explainer. All sample complaints, scores and counts are fictional.</div></footer>
+
+<script>
+/* ===== Data ===== */
+const V="Requires verification";
+const arch=[
+["Users","Complainant or authorized staff submit and review complaints.","Browser","Frontend",V],
+["Frontend","Next.js and React pages and dashboard.","Requests","API",V],
+["Backend API","Application workflows and routes.","Validated data","Validation",V],
+["Validation","Zod input checks and typed processing.","Clean data","Prisma",V],
+["Prisma + PostgreSQL","Database access and persistent storage.","Records","Engine / workflows",V],
+["Overlap module","Scores eligible complaint pairs and proposes candidates.","Candidates","Review","Implemented with tests (per brief)"],
+["Review workflow","Authorized reviewer decides on candidates.","Decisions","Dashboard","Integration pending"],
+["Monitoring and audit","History and audit logs where implemented.","Reports","Staff",V]];
+const life=[
+["1 Registration","Complaint details (institution, description, category, date)","Stored as a complaint record","Complaint record","Complaint",V],
+["2 Validation","Submitted data","Checked and organized","Clean data","Complaint",V],
+["3 Overlap analysis","A complaint plus eligible existing ones","Pairwise comparison","Comparisons","Complaint",V+": not yet linked to registration"],
+["4 Scoring","Signal values","Weighted heuristic score; candidate if ≥ 0.45","Candidates","OverlapCandidate","Engine implemented"],
+["5 Human review","Candidate and evidence","Reviewer judges","Confirmed or dismissed","OverlapCandidate","Review APIs: "+V],
+["6 Case handling","Complaint","Bureau handles per workflow; actions recorded where supported","Status changes","CaseAction, AuditLog",V],
+["7 Monitoring","Case data","Dashboard aggregates","Status and workload views","Several",V],
+["8 Resolution","Handled case","Closure and reporting","Report","Several","Planned / integration pending"]];
+const ex=[
+["Both registered independently","C-101 and C-205 are separate records."],
+["Engine compares signals","Same institution, similar refund wording, 4 days apart, other signals as available."],
+["Score and candidate","An illustrative score places the pair in the High band, so a potential overlap candidate is created."],
+["Reviewer examines evidence","The reviewer reads both complaints side by side with the signal breakdown."],
+["Decision","The reviewer confirms an overlap or dismisses it as independent."],
+["Records preserved","Both original complaints stay available and unchanged."],
+["Handling continues","Complaint handling proceeds independently of the overlap decision. Nothing is merged or resolved."]];
+const bars=[["Institution",.35,1],["Subject",.40,.85],["Time",.15,.9],["Complainant",.10,.2]];
+const wl=[["Bureau A",70],["Bureau B",45],["Bureau C",30]];
+/* ===== Helpers ===== */
+const $=s=>document.querySelector(s);
+function el(t,txt,c){const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(c)e.className=c;return e}
+/* Tabbed panels (architecture, lifecycle) */
+function tabs(chipsId,outId,items,render){
+ const chips=$(chipsId),out=$(outId);
+ items.forEach((it,i)=>{const b=el("button",it[0],"chip");b.setAttribute("role","tab");b.onclick=()=>show(i);chips.appendChild(b)});
+ function show(i){[...chips.children].forEach((c,j)=>c.setAttribute("aria-selected",j==i));out.replaceChildren(...render(items[i]))}
+ show(0)}
+tabs("#archChips","#archOut",arch,a=>[el("p",a[1]),el("p","Passes on: "+a[2]+" → "+a[3]),el("span",a[4],"tag t-v")]);
+tabs("#lifeChips","#lifeOut",life,l=>[el("p","Input: "+l[1]),el("p","Processing: "+l[2]),el("p","Output: "+l[3]),el("p","Entities: "+l[4]),el("span","Status: "+l[5],"tag t-v")]);
+/* Score bars */
+const bw=$("#bars");let tot=0;
+bars.forEach(b=>{const v=b[1]*b[2];tot+=v;const r=el("div",null,"bar");const d=el("div");const i=el("i");i.style.width=(b[2]*100)+"%";d.appendChild(i);r.append(el("span",b[0]+" ×"+b[1]),d,el("span",v.toFixed(3)));bw.appendChild(r)});
+bw.appendChild(el("p","Hypothetical total ≈ "+tot.toFixed(2)+" (illustrative)"));
+/* Workload */
+wl.forEach(w=>{const r=el("div",null,"bar");const d=el("div");const i=el("i");i.style.width=w[1]+"%";d.appendChild(i);r.append(el("span",w[0]),d,el("span",String(w[1])));$("#wl").appendChild(r)});
+/* Walkthrough */
+let s=0;
+function ew(){$("#exTitle").textContent=ex[s][0];$("#exText").textContent=ex[s][1];$("#exCount").textContent="Step "+(s+1)+" of "+ex.length;$("#exScore").hidden=s<2;$("#prev").disabled=s==0;$("#next").disabled=s==ex.length-1}
+$("#prev").onclick=()=>{s--;ew()};$("#next").onclick=()=>{s++;ew()};ew();
+/* Controls */
+$("#simpleBtn").onclick=e=>{const on=document.body.classList.toggle("simple");e.target.setAttribute("aria-pressed",on)};
+$("#pauseBtn").onclick=e=>{const on=document.body.classList.toggle("paused");e.target.setAttribute("aria-pressed",on);e.target.textContent=on?"Play animation":"Pause animation"};
+$("#printBtn").onclick=()=>window.print();
+</script>
+</body>
+</html>

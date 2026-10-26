@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { motion } from 'motion/react';
 import {
   IconDashboard,
   IconFileText,
@@ -11,9 +11,10 @@ import {
   IconBarChart,
   IconScale,
   IconShield,
+  IconCpu,
   IconX,
-} from "../ui/icons";
-import { useComplaints } from "../../lib/context/complaint-context";
+} from '../ui/icons';
+import { useComplaints } from '../../lib/context/complaint-context';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -24,16 +25,17 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.FC<{ className?: string; size?: number | string }>;
-  badge?: "overlaps" | "critical";
+  badge?: 'overlaps' | 'critical';
   section?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { name: "Overview", href: "/", icon: IconDashboard },
-  { name: "Complaints", href: "/complaints", icon: IconFileText },
-  { name: "Overlap Review", href: "/overlap-review", icon: IconLayers, badge: "overlaps" },
-  { name: "Analytics", href: "/analytics", icon: IconBarChart },
-  { name: "Audit Trail", href: "/audit-trail", icon: IconScale },
+  { name: 'Overview', href: '/', icon: IconDashboard },
+  { name: 'Complaints', href: '/complaints', icon: IconFileText },
+  { name: 'Overlap Review', href: '/overlap-review', icon: IconLayers, badge: 'overlaps' },
+  { name: 'Analytics', href: '/analytics', icon: IconBarChart },
+  { name: 'Audit Trail', href: '/audit-trail', icon: IconScale },
+  { name: 'How It Works', href: '/how-it-works', icon: IconCpu },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
@@ -41,8 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { pendingOverlapCount } = useComplaints();
 
   const isRouteActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
+    if (href === '/') {
+      return pathname === '/';
     }
     return pathname.startsWith(href);
   };
@@ -61,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Sidebar container */}
       <aside
         className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col bg-[#0E1626] border-r border-slate-800/80 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
-          isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
@@ -94,14 +96,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Navigation items */}
-        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3.5 py-4" aria-label="Main Navigation">
+        <nav
+          className="flex-1 space-y-1.5 overflow-y-auto px-3.5 py-4"
+          aria-label="Main Navigation"
+        >
           <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Operations &amp; Triage
           </div>
           {NAV_ITEMS.map((item) => {
             const active = isRouteActive(item.href);
             const Icon = item.icon;
-            const badgeCount = item.badge === "overlaps" ? pendingOverlapCount : null;
+            const badgeCount = item.badge === 'overlaps' ? pendingOverlapCount : null;
 
             return (
               <Link
@@ -110,10 +115,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={`group relative flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-all focus:outline-hidden focus:ring-2 focus:ring-[#315EFB] ${
                   active
-                    ? "bg-[#18243C] text-white font-semibold shadow-xs"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                    ? 'bg-[#18243C] text-white font-semibold shadow-xs'
+                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                 }`}
-                aria-current={active ? "page" : undefined}
+                aria-current={active ? 'page' : undefined}
               >
                 {/* Active Indicator Accent */}
                 {active && (
@@ -127,7 +132,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <div className="flex items-center gap-3">
                   <Icon
                     size={17}
-                    className={active ? "text-[#315EFB]" : "text-slate-400 group-hover:text-slate-200 transition-colors"}
+                    className={
+                      active
+                        ? 'text-[#315EFB]'
+                        : 'text-slate-400 group-hover:text-slate-200 transition-colors'
+                    }
                   />
                   <span>{item.name}</span>
                 </div>
