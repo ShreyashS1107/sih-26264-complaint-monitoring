@@ -184,3 +184,84 @@ export function logServerError(context: string, error: unknown): void {
     message: safeMsg,
   });
 }
+
+/**
+ * Standardized database and server error classifier.
+ * Categorizes Prisma, connection, migration, constraint, and unexpected failures,
+ * returning the appropriate HTTP status code (503, 409, 400, 404, or 500)
+ * and safely logging diagnostics without credential leakage.
+ */
+export function handleDatabaseOrServerError(
+  context: string,
+  error: unknown,
+  fallbackMessage: string
+): NextResponse<ApiErrorPayload> {
+  logServerError(context, error);
+
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { name?: string; code?: string; message?: string };
+    const errMsg = String(err.message || '');
+
+    // 1. Prisma initialization / database connection failure
+    if (
+      err.name === 'PrismaClientInitializationError' ||
+      errMsg.includes('Authentication failed against database server') ||
+      errMsg.includes("Can't reach database server") ||
+      errMsg.includes('ECONNREFUSED') ||
+      errMsg.includes('Connection refused') ||
+      errMsg.includes('ETIMEDOUT')
+    ) {
+      return apiError(
+        'DATABASE_UNAVAILABLE',
+        'Database connection is currently unavailable. Please verify database connectivity.',
+        503,
+        { details: { database: 'disconnected' } }
+      );
+    }
+
+    // 2. Schema not migrated (table or column missing)
+    if (
+      err.code === 'P2021' ||
+      err.code === 'P2022' ||
+      errMsg.includes('does not exist in schema public') ||
+      (errMsg.includes('relation') && errMsg.includes('does not exist')) ||
+      (errMsg.includes('table') && errMsg.includes('does not exist'))
+    ) {
+      return apiError(
+        'DATABASE_NOT_MIGRATED',
+        'Database schema tables have not been migrated yet. Run prisma migrate deploy.',
+        503,
+        { details: { database: 'connected', tables: 'missing' } }
+      );
+    }
+
+    // 3. Unique constraint violation
+    if (err.code === 'P2002') {
+      return apiError(
+        'CONFLICT',
+        'A record with this identifier already exists.',
+        409
+      );
+    }
+
+    // 4. Foreign key constraint violation
+    if (err.code === 'P2003') {
+      return apiError(
+        'INVALID_RELATION',
+        'A referenced relation (institution, bureau, or complaint) was not found or constraint failed.',
+        400
+      );
+    }
+
+    // 5. Dependent record required but not found
+    if (err.code === 'P2025') {
+      return apiError(
+        'NOT_FOUND',
+        'Required record was not found in the database.',
+        404
+      );
+    }
+  }
+
+  return apiError('INTERNAL_SERVER_ERROR', fallbackMessage, 500);
+}

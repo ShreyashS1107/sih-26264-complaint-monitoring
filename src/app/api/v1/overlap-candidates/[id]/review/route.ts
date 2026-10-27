@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
+import { apiError, apiSuccess, handleDatabaseOrServerError } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
 import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
@@ -340,11 +340,10 @@ export async function POST(request: Request, context: RouteContext) {
 
     return apiSuccess({ candidate: updatedCandidate });
   } catch (_error: unknown) {
-    logServerError('POST /api/v1/overlap-candidates/[id]/review', _error);
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while recording the overlap review decision.',
-      500
+    return handleDatabaseOrServerError(
+      'POST /api/v1/overlap-candidates/[id]/review',
+      _error,
+      'An unexpected error occurred while recording the overlap review decision.'
     );
   }
 }

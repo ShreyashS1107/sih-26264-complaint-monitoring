@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
+import { apiError, apiSuccess, handleDatabaseOrServerError } from '@/lib/api-response';
 import { approvalStatusEnum } from '@/modules/institutions/schema';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
@@ -103,11 +103,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (_error: unknown) {
-    logServerError('GET /api/v1/institutions', _error);
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while querying institutions.',
-      500
+    return handleDatabaseOrServerError(
+      'GET /api/v1/institutions',
+      _error,
+      'An unexpected error occurred while querying institutions.'
     );
   }
 }

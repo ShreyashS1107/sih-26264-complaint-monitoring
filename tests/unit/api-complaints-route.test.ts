@@ -521,7 +521,7 @@ describe('POST /api/v1/complaints Route Handler', () => {
     expect(body.data.complaint.allegations).toHaveLength(1);
   });
 
-  it('should safely log and return 500 when database table lookup fails due to unmigrated schema or connection failure', async () => {
+  it('should safely log and return 503 DATABASE_NOT_MIGRATED when database table lookup fails due to unmigrated schema', async () => {
     vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(null);
     vi.spyOn(db.institution, 'findUnique').mockRejectedValue(
       new Error('relation "Institution" does not exist in schema public')
@@ -538,9 +538,10 @@ describe('POST /api/v1/complaints Route Handler', () => {
     const response = await POST(request);
     const body = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(body.error.code).toBe('INTERNAL_SERVER_ERROR');
-    expect(body.error.message).toContain('unexpected error occurred while processing the request');
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe('DATABASE_NOT_MIGRATED');
+    expect(body.error.message).toContain('Database schema tables have not been migrated yet');
+    expect(body.error.details).toEqual({ database: 'connected', tables: 'missing' });
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining('[SERVER_ERROR] POST /api/v1/complaints'),
       expect.objectContaining({

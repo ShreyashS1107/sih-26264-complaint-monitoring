@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
+import { apiError, apiSuccess, logServerError, handleDatabaseOrServerError } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
 import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
@@ -163,11 +163,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (_error: unknown) {
-    logServerError('GET /api/v1/complaints', _error);
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while retrieving complaints.',
-      500
+    return handleDatabaseOrServerError(
+      'GET /api/v1/complaints',
+      _error,
+      'An unexpected error occurred while retrieving complaints.'
     );
   }
 }
@@ -453,11 +452,10 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (_error: unknown) {
-    logServerError('POST /api/v1/complaints', _error);
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while processing the request.',
-      500
+    return handleDatabaseOrServerError(
+      'POST /api/v1/complaints',
+      _error,
+      'An unexpected error occurred while processing the request.'
     );
   }
 }

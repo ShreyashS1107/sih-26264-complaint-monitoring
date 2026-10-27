@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
+import { apiError, apiSuccess, handleDatabaseOrServerError } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
 import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
@@ -20,13 +20,13 @@ type RouteContext = {
  * Permitted status state machine transitions.
  */
 const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  SUBMITTED: ['UNDER_PRELIMINARY_REVIEW', 'DISMISSED'],
+  SUBMITTED: ['UNDER_PRELIMINARY_REVIEW', 'UNDER_INQUIRY', 'DISMISSED'],
   UNDER_PRELIMINARY_REVIEW: ['UNDER_INQUIRY', 'COORDINATED_REVIEW', 'DISMISSED'],
-  UNDER_INQUIRY: ['COORDINATED_REVIEW', 'RESOLVED', 'DISMISSED'],
-  COORDINATED_REVIEW: ['UNDER_INQUIRY', 'RESOLVED', 'DISMISSED'],
-  RESOLVED: ['CLOSED', 'UNDER_INQUIRY'],
+  UNDER_INQUIRY: ['COORDINATED_REVIEW', 'UNDER_PRELIMINARY_REVIEW', 'RESOLVED', 'DISMISSED'],
+  COORDINATED_REVIEW: ['UNDER_INQUIRY', 'UNDER_PRELIMINARY_REVIEW', 'RESOLVED', 'DISMISSED'],
+  RESOLVED: ['CLOSED', 'UNDER_INQUIRY', 'UNDER_PRELIMINARY_REVIEW'],
   CLOSED: ['UNDER_PRELIMINARY_REVIEW', 'UNDER_INQUIRY'],
-  DISMISSED: ['UNDER_PRELIMINARY_REVIEW'],
+  DISMISSED: ['UNDER_PRELIMINARY_REVIEW', 'SUBMITTED'],
 };
 
 /**
@@ -120,10 +120,10 @@ export async function GET(_request: Request, context: RouteContext) {
       },
     });
   } catch (_error: unknown) {
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while retrieving the complaint.',
-      500
+    return handleDatabaseOrServerError(
+      'GET /api/v1/complaints/[id]',
+      _error,
+      'An unexpected error occurred while retrieving the complaint.'
     );
   }
 }
@@ -339,11 +339,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return apiSuccess({ complaint: updatedComplaint });
   } catch (_error: unknown) {
-    logServerError('PATCH /api/v1/complaints/[id]', _error);
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while updating the complaint.',
-      500
+    return handleDatabaseOrServerError(
+      'PATCH /api/v1/complaints/[id]',
+      _error,
+      'An unexpected error occurred while updating the complaint.'
     );
   }
 }
@@ -520,11 +519,10 @@ export async function DELETE(request: Request, context: RouteContext) {
       strategy: hasDependentRecords ? 'archived' : 'deleted',
     });
   } catch (_error: unknown) {
-    logServerError('DELETE /api/v1/complaints/[id]', _error);
-    return apiError(
-      'INTERNAL_SERVER_ERROR',
-      'An unexpected error occurred while deleting the complaint.',
-      500
+    return handleDatabaseOrServerError(
+      'DELETE /api/v1/complaints/[id]',
+      _error,
+      'An unexpected error occurred while deleting the complaint.'
     );
   }
 }
