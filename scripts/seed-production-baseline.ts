@@ -1,7 +1,5 @@
 import { PrismaClient, OfficerRole, ComplaintPriority, ComplaintStatus, ComplaintCategory, ComplainantType, OverlapReviewStatus, ApprovalStatus } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
 function getMaskedHost(): string {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) return 'DATABASE_URL not set in environment';
@@ -14,7 +12,7 @@ function getMaskedHost(): string {
 }
 
 // 1. Canonical Bureaus
-const CANONICAL_BUREAUS = [
+export const CANONICAL_BUREAUS = [
   {
     code: 'APPROVAL_BUREAU',
     name: 'Approval Bureau',
@@ -43,7 +41,7 @@ const CANONICAL_BUREAUS = [
 ];
 
 // 2. Canonical Demo Officers
-const CANONICAL_OFFICERS = [
+export const CANONICAL_OFFICERS = [
   {
     badgeNumber: 'OFF-AICTE-000',
     name: 'Dr. S. K. Rao (Central Admin)',
@@ -75,7 +73,7 @@ const CANONICAL_OFFICERS = [
 ];
 
 // 3. Canonical AICTE Institutions
-const CANONICAL_INSTITUTIONS = [
+export const CANONICAL_INSTITUTIONS = [
   {
     permanentId: '1-10928374',
     name: 'Apex Institute of Advanced Technology',
@@ -128,8 +126,8 @@ const CANONICAL_INSTITUTIONS = [
   },
 ];
 
-// 4. Baseline Complaints
-const BASELINE_COMPLAINTS = [
+// 4. Baseline Complaints (12 synthetic demo complaints)
+export const BASELINE_COMPLAINTS = [
   {
     complaintNumber: 'AICTE-2026-8401',
     originalBureauRef: 'APP/2026/0881',
@@ -220,10 +218,100 @@ const BASELINE_COMPLAINTS = [
     complainantType: ComplainantType.FACULTY,
     complainantMaskedId: 'FAC-***-1904',
   },
+  {
+    complaintNumber: 'AICTE-2026-8407',
+    originalBureauRef: 'FGC/2026/FAC-082',
+    institutionPermanentId: '1-30495821',
+    bureauCode: 'FACULTY_GRIEVANCE_CELL',
+    officerBadgeNumber: 'OFF-AICTE-003',
+    subject: 'Faculty strength potentially below prescribed requirements',
+    description:
+      'Synthetic demonstration record for prototype testing only. Faculty representation alleging departmental faculty cadre ratio and regularized sanctioned teaching positions have fallen below prescribed council norms in mechanical engineering.',
+    category: ComplaintCategory.OTHER,
+    priority: ComplaintPriority.HIGH,
+    status: ComplaintStatus.UNDER_PRELIMINARY_REVIEW,
+    complainantType: ComplainantType.FACULTY,
+    complainantMaskedId: 'FAC-***-3081',
+  },
+  {
+    complaintNumber: 'AICTE-2026-8408',
+    originalBureauRef: 'APP/2026/INT-119',
+    institutionPermanentId: '1-30495821',
+    bureauCode: 'APPROVAL_BUREAU',
+    officerBadgeNumber: 'OFF-AICTE-001',
+    subject: 'Suspected discrepancy in approved course intake',
+    description:
+      'Synthetic demonstration record for prototype testing only. Discrepancy observed between state centralized counseling seat allotment figures and approved intake quotas on the Extension of Approval (EoA) portal for specialized degree programmes.',
+    category: ComplaintCategory.UNAPPROVED_PROGRAM,
+    priority: ComplaintPriority.HIGH,
+    status: ComplaintStatus.UNDER_INQUIRY,
+    complainantType: ComplainantType.CITIZEN,
+    complainantMaskedId: 'CIT-***-5104',
+  },
+  {
+    complaintNumber: 'AICTE-2026-8409',
+    originalBureauRef: 'SGRC/2026/FEE-205',
+    institutionPermanentId: '1-40918273',
+    bureauCode: 'STUDENT_GRIEVANCE_CELL',
+    officerBadgeNumber: 'OFF-AICTE-002',
+    subject: 'Suspected additional examination or laboratory fees',
+    description:
+      'Synthetic demonstration record for prototype testing only. Grievance alleging collection of unapproved supplementary laboratory consumables charges and examination processing fees contrary to sanctioned regulatory guidelines.',
+    category: ComplaintCategory.FEE_ANOMALY,
+    priority: ComplaintPriority.MEDIUM,
+    status: ComplaintStatus.UNDER_INQUIRY,
+    complainantType: ComplainantType.STUDENT,
+    complainantMaskedId: 'STU-***-6119',
+  },
+  {
+    complaintNumber: 'AICTE-2026-8410',
+    originalBureauRef: 'SGRC/2026/POL-310',
+    institutionPermanentId: '1-40918273',
+    bureauCode: 'STUDENT_GRIEVANCE_CELL',
+    officerBadgeNumber: 'OFF-AICTE-002',
+    subject: 'Request to verify student grievance redressal procedures',
+    description:
+      'Synthetic demonstration record for prototype testing only. Representation requesting verification of institutional Student Grievance Redressal Committee (SGRC) operational status, portal accessibility, and ombudsperson notifications.',
+    category: ComplaintCategory.OTHER,
+    priority: ComplaintPriority.LOW,
+    status: ComplaintStatus.SUBMITTED,
+    complainantType: ComplainantType.STUDENT,
+    complainantMaskedId: 'STU-***-7280',
+  },
+  {
+    complaintNumber: 'AICTE-2026-8411',
+    originalBureauRef: 'ARC/2026/HST-041',
+    institutionPermanentId: '1-10928374',
+    bureauCode: 'ANTI_RAGGING_CELL',
+    officerBadgeNumber: 'OFF-AICTE-000',
+    subject: 'Request to review hostel anti-ragging safeguards',
+    description:
+      'Synthetic demonstration record for prototype testing only. Parental representation petitioning for procedural verification of anti-ragging committee surveillance, evening warden patrol coverage, and orientation safeguards in residential campus hostels.',
+    category: ComplaintCategory.HARASSMENT_RAGGING,
+    priority: ComplaintPriority.HIGH,
+    status: ComplaintStatus.UNDER_PRELIMINARY_REVIEW,
+    complainantType: ComplainantType.PARENT,
+    complainantMaskedId: 'PAR-***-9142',
+  },
+  {
+    complaintNumber: 'AICTE-2026-8412',
+    originalBureauRef: 'APP/2026/ADV-091',
+    institutionPermanentId: '1-20948571',
+    bureauCode: 'APPROVAL_BUREAU',
+    officerBadgeNumber: 'OFF-AICTE-001',
+    subject: 'Suspected mismatch between advertised and approved programme details',
+    description:
+      'Synthetic demonstration record for prototype testing only. Public inquiry concerning suspected divergence between advertised executive management courses in admission brochures and approved nomenclatures recorded on the central portal.',
+    category: ComplaintCategory.UNAPPROVED_PROGRAM,
+    priority: ComplaintPriority.HIGH,
+    status: ComplaintStatus.UNDER_PRELIMINARY_REVIEW,
+    complainantType: ComplainantType.CITIZEN,
+    complainantMaskedId: 'CIT-***-4091',
+  },
 ];
 
-// 5. Initial Cross-Bureau Overlap Candidate Pairs
-const BASELINE_OVERLAPS = [
+// 5. Cross-Bureau Overlap Candidate Pairs (5 synthetic review pairs)
+export const BASELINE_OVERLAPS = [
   {
     primaryComplaintNumber: 'AICTE-2026-8401',
     candidateComplaintNumber: 'AICTE-2026-8402',
@@ -266,6 +354,34 @@ const BASELINE_OVERLAPS = [
       dayDelta: 2,
     },
   },
+  {
+    primaryComplaintNumber: 'AICTE-2026-8407',
+    candidateComplaintNumber: 'AICTE-2026-8408',
+    overallScore: 0.79,
+    entityScore: 1.0,
+    subjectScore: 0.74,
+    complainantScore: 0.55,
+    temporalScore: 0.88,
+    signals: {
+      explanation: 'Both complaints target Karnataka College of Engineering & Research (1-30495821). Correlated indicators regarding technical programme intake expansion and faculty cadre ratio adequacy.',
+      commonKeywords: ['engineering', 'intake', 'faculty', 'cadre', 'quota'],
+      dayDelta: 6,
+    },
+  },
+  {
+    primaryComplaintNumber: 'AICTE-2026-8403',
+    candidateComplaintNumber: 'AICTE-2026-8412',
+    overallScore: 0.86,
+    entityScore: 1.0,
+    subjectScore: 0.81,
+    complainantScore: 0.65,
+    temporalScore: 0.92,
+    signals: {
+      explanation: 'Both complaints target Delhi NCR Technical Institute (1-20948571). Significant correlation regarding unapproved postgraduate programme offerings and advertised admission brochure discrepancies.',
+      commonKeywords: ['postgraduate', 'diploma', 'unapproved', 'admission', 'brochure'],
+      dayDelta: 3,
+    },
+  },
 ];
 
 export async function seedProductionBaseline() {
@@ -282,8 +398,10 @@ export async function seedProductionBaseline() {
     process.exit(1);
   }
 
-  // 1. Upsert Bureaus
-  console.log('\n[1/5] Upserting 5 AICTE Bureaus...');
+  const prisma = new PrismaClient();
+  try {
+    // 1. Upsert Bureaus
+    console.log('\n[1/5] Upserting 5 AICTE Bureaus...');
   const bureauMap = new Map<string, string>();
   for (const b of CANONICAL_BUREAUS) {
     const record = await prisma.bureau.upsert({
@@ -342,7 +460,7 @@ export async function seedProductionBaseline() {
   }
 
   // 4. Upsert Baseline Complaints
-  console.log('\n[4/5] Upserting 6 Baseline Complaints...');
+  console.log(`\n[4/5] Upserting ${BASELINE_COMPLAINTS.length} Baseline Complaints...`);
   const complaintMap = new Map<string, { id: string; institutionId: string }>();
   for (const c of BASELINE_COMPLAINTS) {
     const institutionId = instMap.get(c.institutionPermanentId);
@@ -376,7 +494,7 @@ export async function seedProductionBaseline() {
   }
 
   // 5. Upsert Overlap Candidates
-  console.log('\n[5/5] Upserting 3 Cross-Bureau Overlap Candidate Pairs...');
+  console.log(`\n[5/5] Upserting ${BASELINE_OVERLAPS.length} Cross-Bureau Overlap Candidate Pairs...`);
   for (const ovl of BASELINE_OVERLAPS) {
     const primary = complaintMap.get(ovl.primaryComplaintNumber);
     const candidate = complaintMap.get(ovl.candidateComplaintNumber);
@@ -414,13 +532,16 @@ export async function seedProductionBaseline() {
 
   console.log('\n' + '='.repeat(70));
   console.log('✓ Successfully executed baseline seed.');
-  console.log('All 5 institutions, 6 complaints, and 3 overlap pairs are ready.');
+  console.log(`All ${CANONICAL_INSTITUTIONS.length} institutions, ${BASELINE_COMPLAINTS.length} complaints, and ${BASELINE_OVERLAPS.length} overlap pairs are ready.`);
   console.log('Zero records were deleted or overwritten.');
   console.log('='.repeat(70));
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-// Execute when invoked directly
-if (require.main === module || process.argv[1]?.includes('seed-production-baseline')) {
+// Execute when invoked directly as a script (e.g. via npm run db:seed-baseline)
+if (!process.env.VITEST && process.argv[1]?.replace(/\\/g, '/').endsWith('scripts/seed-production-baseline.ts')) {
   seedProductionBaseline()
     .catch((err: unknown) => {
       console.error('\nBaseline seeding failed:');
@@ -431,8 +552,5 @@ if (require.main === module || process.argv[1]?.includes('seed-production-baseli
         console.error(String(err));
       }
       process.exit(1);
-    })
-    .finally(async () => {
-      await prisma.$disconnect();
     });
 }

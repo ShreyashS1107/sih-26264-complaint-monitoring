@@ -151,8 +151,38 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         let hasLiveComplaints = false;
         if (complaintsRes.status === 'fulfilled') {
-          setComplaints(complaintsRes.value.complaints);
-          hasLiveComplaints = complaintsRes.value.complaints.length > 0;
+          const serverComplaints = complaintsRes.value.complaints;
+          setComplaints((prevComplaints) => {
+            if (serverComplaints.length === 0) {
+              return serverComplaints;
+            }
+            // Preserve locally attached evidence/allegations if server response omitted them
+            return serverComplaints.map((sc) => {
+              const prev = prevComplaints.find(
+                (p) =>
+                  p.id === sc.id ||
+                  p.complaintNumber === sc.id ||
+                  (p as any).dbId === sc.id ||
+                  (p as any).dbId === (sc as any).dbId
+              );
+              if (
+                prev?.evidence &&
+                prev.evidence.length > 0 &&
+                (!sc.evidence || sc.evidence.length === 0)
+              ) {
+                return {
+                  ...sc,
+                  evidence: prev.evidence,
+                  allegations:
+                    prev.allegations && prev.allegations.length > 0
+                      ? prev.allegations
+                      : sc.allegations,
+                };
+              }
+              return sc;
+            });
+          });
+          hasLiveComplaints = serverComplaints.length > 0;
         }
 
         if (overlapsRes.status === 'fulfilled') {
@@ -220,7 +250,11 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         // If server accepted, update state
         setComplaints((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+          prev.map((item) =>
+            item.id === id || item.complaintNumber === id || (item as any).dbId === id
+              ? { ...item, status: newStatus }
+              : item
+          )
         );
 
         const newAudit: AuditEvent = {
@@ -232,6 +266,9 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
+
+        // Background refresh to synchronize dashboard metrics and counts
+        void refreshData();
 
         return { success: true };
       } catch (err: unknown) {
@@ -246,7 +283,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsSubmitting(false);
       }
     },
-    [currentOfficer]
+    [currentOfficer, refreshData]
   );
 
   // Delete or archive a complaint
@@ -261,11 +298,17 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const res = await apiClient.deleteComplaint(id);
 
         if (res.action === 'DELETED') {
-          setComplaints((prev) => prev.filter((item) => item.id !== id));
+          setComplaints((prev) =>
+            prev.filter(
+              (item) => item.id !== id && item.complaintNumber !== id && (item as any).dbId !== id
+            )
+          );
         } else {
           setComplaints((prev) =>
             prev.map((item) =>
-              item.id === id ? { ...item, status: 'Closed' as ComplaintStatus } : item
+              item.id === id || item.complaintNumber === id || (item as any).dbId === id
+                ? { ...item, status: 'Closed' as ComplaintStatus }
+                : item
             )
           );
         }
@@ -280,6 +323,9 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
 
+        // Background refresh to synchronize dashboard metrics and counts
+        void refreshData();
+
         return { success: true, action: res.action };
       } catch (err: unknown) {
         const errorMsg =
@@ -293,7 +339,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsSubmitting(false);
       }
     },
-    [currentOfficer]
+    [currentOfficer, refreshData]
   );
 
   // Adjudicate an overlap pair with backend review submission
@@ -327,7 +373,11 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         setOverlaps((prev) =>
           prev.map((item) => {
-            if (item.id === overlapId) {
+            const matchesId =
+              item.id === overlapId ||
+              `${item.sourceComplaintId}-${item.targetComplaintId}` === overlapId ||
+              `${item.targetComplaintId}-${item.sourceComplaintId}` === overlapId;
+            if (matchesId) {
               affectedSourceId = item.sourceComplaintId;
               affectedTargetId = item.targetComplaintId;
               return {
@@ -345,7 +395,16 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (decision === 'Linked' && affectedSourceId && affectedTargetId) {
           setComplaints((prev) =>
             prev.map((c) => {
-              if (c.id === affectedSourceId) {
+              const matchesSource =
+                c.id === affectedSourceId ||
+                c.complaintNumber === affectedSourceId ||
+                (c as any).dbId === affectedSourceId;
+              const matchesTarget =
+                c.id === affectedTargetId ||
+                c.complaintNumber === affectedTargetId ||
+                (c as any).dbId === affectedTargetId;
+
+              if (matchesSource) {
                 const current = c.relatedCaseIds || [];
                 return {
                   ...c,
@@ -354,7 +413,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     : [...current, affectedTargetId],
                 };
               }
-              if (c.id === affectedTargetId) {
+              if (matchesTarget) {
                 const current = c.relatedCaseIds || [];
                 return {
                   ...c,
@@ -379,6 +438,9 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
+
+        // Background refresh to synchronize dashboard metrics and candidate queues
+        void refreshData();
 
         return true;
       } catch (err: unknown) {
@@ -405,30 +467,53 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsSubmitting(false);
       }
     },
-    []
+    [refreshData]
   );
 
   const getComplaint = useCallback(
     (id: string) => {
-      return complaints.find((c) => c.id === id);
+      if (!id) return undefined;
+      return complaints.find(
+        (c) => c.id === id || c.complaintNumber === id || (c as any).dbId === id
+      );
     },
     [complaints]
   );
 
   const getOverlap = useCallback(
     (id: string) => {
-      return overlaps.find((o) => o.id === id);
+      if (!id) return undefined;
+      return overlaps.find(
+        (o) =>
+          o.id === id ||
+          `${o.sourceComplaintId}-${o.targetComplaintId}` === id ||
+          `${o.targetComplaintId}-${o.sourceComplaintId}` === id
+      );
     },
     [overlaps]
   );
 
   const getOverlapsForComplaint = useCallback(
     (complaintId: string) => {
+      if (!complaintId) return [];
+      const c = complaints.find(
+        (item) =>
+          item.id === complaintId ||
+          item.complaintNumber === complaintId ||
+          (item as any).dbId === complaintId
+      );
+      const targetIds = new Set<string>();
+      targetIds.add(complaintId);
+      if (c) {
+        if (c.id) targetIds.add(c.id);
+        if (c.complaintNumber) targetIds.add(c.complaintNumber);
+        if ((c as any).dbId) targetIds.add((c as any).dbId);
+      }
       return overlaps.filter(
-        (o) => o.sourceComplaintId === complaintId || o.targetComplaintId === complaintId
+        (o) => targetIds.has(o.sourceComplaintId) || targetIds.has(o.targetComplaintId)
       );
     },
-    [overlaps]
+    [overlaps, complaints]
   );
 
   const switchOfficer = useCallback(
@@ -533,6 +618,9 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
 
+        // Background refresh to synchronize dashboard metrics and counters from backend
+        void refreshData();
+
         return {
           success: true,
           complaint: res.complaint,
@@ -557,7 +645,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsSubmitting(false);
       }
     },
-    [currentOfficer]
+    [currentOfficer, refreshData]
   );
 
   const value = useMemo(

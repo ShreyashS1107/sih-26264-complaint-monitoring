@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { useComplaints } from "../../lib/context/complaint-context";
+import { apiClient } from "../../lib/api-client";
 import {
   IconChevronLeft,
   IconBuilding,
@@ -20,7 +21,7 @@ import {
   IconX,
 } from "../ui/icons";
 import { StatusBadge, PriorityBadge, OverlapStatusBadge, Badge } from "../ui/badge";
-import { ComplaintStatus } from "../../lib/types";
+import { Complaint, ComplaintStatus } from "../../lib/types";
 import { fadeInUpVariants, staggerContainerVariants } from "../../lib/motion";
 
 interface ComplaintDetailViewProps {
@@ -41,26 +42,70 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
   const router = useRouter();
   const {
     complaints,
+    isLoading: isContextLoading,
     updateComplaintStatus,
     deleteComplaint,
     getOverlapsForComplaint,
     auditLogs,
   } = useComplaints();
 
-  // Find complaint in live state
-  const complaint = useMemo(() => {
-    return complaints.find((c) => c.id === id);
+  // Find complaint in live context by canonical ID, complaintNumber, or dbId
+  const contextComplaint = useMemo(() => {
+    return complaints.find(
+      (c) => c.id === id || c.complaintNumber === id || (c as any).dbId === id
+    );
   }, [complaints, id]);
+
+  const [fetchedComplaint, setFetchedComplaint] = useState<Complaint | null>(null);
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+
+  // Directly query backend if dossier record is not in active context (e.g. on direct link or reload)
+  useEffect(() => {
+    if (contextComplaint) {
+      return;
+    }
+
+    let active = true;
+
+    apiClient
+      .getComplaint(id)
+      .then((data) => {
+        if (active) {
+          setFetchedComplaint(data);
+          setResolvedId(id);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setResolvedId(id);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [contextComplaint, id]);
+
+  const complaint = contextComplaint || fetchedComplaint;
+  const isResolvingDossier = !contextComplaint && resolvedId !== id;
 
   // Overlap candidates for this complaint
   const relatedOverlaps = useMemo(() => {
-    return getOverlapsForComplaint(id);
-  }, [getOverlapsForComplaint, id]);
+    return getOverlapsForComplaint(complaint?.id || id);
+  }, [getOverlapsForComplaint, complaint?.id, id]);
 
   // Audit events for this complaint
   const relatedAuditLogs = useMemo(() => {
-    return auditLogs.filter((log) => log.complaintId === id);
-  }, [auditLogs, id]);
+    const targetId = complaint?.id || id;
+    const complaintNumber = complaint?.complaintNumber;
+    const dbId = (complaint as any)?.dbId;
+    return auditLogs.filter(
+      (log) =>
+        log.complaintId === targetId ||
+        (complaintNumber && log.complaintId === complaintNumber) ||
+        (dbId && log.complaintId === dbId)
+    );
+  }, [auditLogs, complaint, id]);
 
   // Status transition state
   const [targetStatus, setTargetStatus] = useState<ComplaintStatus | "">(
@@ -79,7 +124,20 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
-  // If complaint is not found in the dataset
+  // Loading state while searching context and querying backend
+  if (!complaint && (isContextLoading || isResolvingDossier)) {
+    return (
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-12 text-center shadow-xs">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary-accent)] border-t-transparent mb-3" />
+        <h2 className="text-base font-bold text-[var(--text-primary)]">Loading Complaint Dossier...</h2>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          Retrieving procedural records, evidence, and overlap telemetry for <span className="font-mono font-semibold text-[var(--text-primary)]">{id}</span>.
+        </p>
+      </div>
+    );
+  }
+
+  // If complaint is genuinely not found in the dataset after API resolution
   if (!complaint) {
     return (
       <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-12 text-center shadow-xs">
@@ -276,13 +334,19 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
                 </p>
               </div>
               <span className="text-xs font-bold tabular-nums text-[var(--text-secondary)]">
-                {complaint.evidence.length} Files
+                {(complaint.evidence || []).length} Files
               </span>
             </div>
 
-            {complaint.evidence.length === 0 ? (
-              <div className="py-8 text-center text-xs text-[var(--text-secondary)]">
-                No evidentiary attachments were submitted with this grievance.
+            {!complaint.evidence || complaint.evidence.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[var(--text-secondary)] space-y-2">
+                <div className="flex h-10 w-10 mx-auto items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-[var(--text-muted)]">
+                  <IconFileText size={20} />
+                </div>
+                <p className="font-semibold text-[var(--text-primary)]">No dossier documents uploaded yet</p>
+                <p className="text-[11px] text-[var(--text-secondary)] max-w-sm mx-auto">
+                  No evidentiary exhibits or supporting files were attached to this complaint record during initial filing.
+                </p>
               </div>
             ) : (
               <div className="mt-3 divide-y divide-[var(--border-subtle)]">

@@ -56,8 +56,18 @@ function OverlapReviewQueueContent() {
 
       // Search match
       if (q) {
-        const sourceComplaint = complaints.find((c) => c.id === ovl.sourceComplaintId);
-        const targetComplaint = complaints.find((c) => c.id === ovl.targetComplaintId);
+        const sourceComplaint = complaints.find(
+          (c) =>
+            c.id === ovl.sourceComplaintId ||
+            c.complaintNumber === ovl.sourceComplaintId ||
+            (c as any).dbId === ovl.sourceComplaintId
+        );
+        const targetComplaint = complaints.find(
+          (c) =>
+            c.id === ovl.targetComplaintId ||
+            c.complaintNumber === ovl.targetComplaintId ||
+            (c as any).dbId === ovl.targetComplaintId
+        );
 
         const matchesId = ovl.id.toLowerCase().includes(q);
         const matchesSourceId = ovl.sourceComplaintId.toLowerCase().includes(q);
@@ -349,8 +359,18 @@ function OverlapReviewQueueContent() {
       ) : (
         <motion.div variants={fadeInUpVariants} className="space-y-4">
           {sortedOverlaps.map((candidate) => {
-            const source = complaints.find((c) => c.id === candidate.sourceComplaintId);
-            const target = complaints.find((c) => c.id === candidate.targetComplaintId);
+            const source = complaints.find(
+              (c) =>
+                c.id === candidate.sourceComplaintId ||
+                c.complaintNumber === candidate.sourceComplaintId ||
+                (c as any).dbId === candidate.sourceComplaintId
+            );
+            const target = complaints.find(
+              (c) =>
+                c.id === candidate.targetComplaintId ||
+                c.complaintNumber === candidate.targetComplaintId ||
+                (c as any).dbId === candidate.targetComplaintId
+            );
 
             return (
               <div
@@ -393,9 +413,14 @@ function OverlapReviewQueueContent() {
                   {/* Source Case Box */}
                   <div className="rounded-xl bg-[var(--bg-surface-subtle)] p-4 border border-[var(--border-subtle)] space-y-2 shadow-2xs">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono font-bold text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-2 py-0.5 rounded">
-                        {candidate.sourceComplaintId}
-                      </span>
+                      <Link
+                        href={`/complaints/${encodeURIComponent(source?.id || candidate.sourceComplaintId)}`}
+                        className="font-mono font-bold text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-2 py-0.5 rounded hover:underline inline-flex items-center gap-1"
+                        title="Inspect source dossier"
+                      >
+                        <span>{candidate.sourceComplaintId}</span>
+                        <IconChevronRight size={11} />
+                      </Link>
                       <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider font-mono">
                         Source Dossier
                       </span>
@@ -413,16 +438,23 @@ function OverlapReviewQueueContent() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-xs text-[var(--text-muted)] italic">Dossier details unavailable</p>
+                      <p className="text-xs text-[var(--text-muted)] italic">
+                        No dossier uploaded yet ({candidate.sourceComplaintId})
+                      </p>
                     )}
                   </div>
 
                   {/* Target Case Box */}
                   <div className="rounded-xl bg-[var(--bg-surface-subtle)] p-4 border border-[var(--border-subtle)] space-y-2 shadow-2xs">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono font-bold text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-2 py-0.5 rounded">
-                        {candidate.targetComplaintId}
-                      </span>
+                      <Link
+                        href={`/complaints/${encodeURIComponent(target?.id || candidate.targetComplaintId)}`}
+                        className="font-mono font-bold text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-2 py-0.5 rounded hover:underline inline-flex items-center gap-1"
+                        title="Inspect target dossier"
+                      >
+                        <span>{candidate.targetComplaintId}</span>
+                        <IconChevronRight size={11} />
+                      </Link>
                       <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider font-mono">
                         Target Dossier
                       </span>
@@ -440,7 +472,9 @@ function OverlapReviewQueueContent() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-xs text-[var(--text-muted)] italic">Dossier details unavailable</p>
+                      <p className="text-xs text-[var(--text-muted)] italic">
+                        No dossier uploaded yet ({candidate.targetComplaintId})
+                      </p>
                     )}
                   </div>
                 </div>

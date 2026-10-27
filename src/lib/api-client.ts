@@ -414,8 +414,10 @@ export const apiClient = {
       pagination: { total: number; page: number; limit: number; totalPages: number };
     }>(`/api/v1/complaints${qs}`);
 
-    const complaints: Complaint[] = res.complaints.map((c) => ({
+    const complaints: Complaint[] = (res.complaints || []).map((c) => ({
       id: c.complaintNumber || c.id,
+      complaintNumber: c.complaintNumber || c.id,
+      dbId: c.id,
       title: c.subject,
       institutionId: c.institution?.permanentId || c.institution?.id || 'INST-UNKNOWN',
       institutionName: c.institution?.name || 'Unspecified AICTE Institute',
@@ -429,8 +431,11 @@ export const apiClient = {
       priority: mapBackendPriority(c.priority),
       status: mapBackendStatus(c.status),
       description: c.description,
-      allegations: [c.subject],
-      evidence: [],
+      allegations:
+        Array.isArray((c as any).allegations) && (c as any).allegations.length > 0
+          ? (c as any).allegations
+          : [c.subject],
+      evidence: Array.isArray((c as any).evidence) ? (c as any).evidence : [],
       relatedCaseIds: [],
     }));
 
@@ -441,23 +446,21 @@ export const apiClient = {
    * Fetch full dossier for a single complaint
    */
   async getComplaint(id: string): Promise<Complaint> {
-    const res = await fetchApi<{
-      complaint: BackendComplaintRecord;
-      institution?: { permanentId: string; name: string; state: string; district: string };
-      bureau?: { code: string; name: string };
-      caseActions?: Array<{ id: string; action: string; note: string; createdAt: string }>;
-    }>(`/api/v1/complaints/${encodeURIComponent(id)}`);
+    const res = await fetchApi<any>(`/api/v1/complaints/${encodeURIComponent(id)}`);
 
-    const c = res.complaint;
+    const c = (res as any)?.complaint || res;
     return {
       id: c.complaintNumber || c.id,
+      complaintNumber: c.complaintNumber || c.id,
+      dbId: c.id,
       title: c.subject,
-      institutionId: res.institution?.permanentId || c.institution?.permanentId || 'INST-UNKNOWN',
+      institutionId:
+        res.institution?.permanentId || c.institution?.permanentId || c.institution?.id || 'INST-UNKNOWN',
       institutionName:
         res.institution?.name || c.institution?.name || 'Unspecified AICTE Institute',
       region: res.institution?.district || c.institution?.district || 'Central',
       state: res.institution?.state || c.institution?.state || 'National',
-      bureau: mapBackendBureau(res.bureau?.name || c.bureau?.name),
+      bureau: mapBackendBureau(res.bureau?.name || c.bureau?.name || c.bureau?.code),
       category: c.category?.replace(/_/g, ' ') || 'General Grievance',
       complainantType: 'Whistleblower',
       filingDate: c.createdAt ? c.createdAt.slice(0, 10) : '2026-02-01',
@@ -465,8 +468,9 @@ export const apiClient = {
       priority: mapBackendPriority(c.priority),
       status: mapBackendStatus(c.status),
       description: c.description,
-      allegations: [c.subject],
-      evidence: [],
+      allegations:
+        Array.isArray(c.allegations) && c.allegations.length > 0 ? c.allegations : [c.subject],
+      evidence: Array.isArray(c.evidence) ? c.evidence : [],
       relatedCaseIds: [],
     };
   },
@@ -562,6 +566,8 @@ export const apiClient = {
     const c = res.complaint;
     const formattedComplaint: Complaint = {
       id: c.complaintNumber || c.id,
+      complaintNumber: c.complaintNumber || c.id,
+      dbId: c.id,
       title: c.subject,
       institutionId: c.institution?.permanentId || payload.institutionId,
       institutionName: c.institution?.name || 'Verified Institution',
@@ -583,9 +589,14 @@ export const apiClient = {
 
     const formattedOverlaps: OverlapCandidate[] = (res.overlaps.candidates || []).map(
       (cand: any) => ({
-        id: `${cand.primaryComplaintId}-${cand.candidateComplaintId}`,
-        sourceComplaintId: cand.primaryComplaintId,
-        targetComplaintId: cand.candidateComplaintId,
+        id: cand.id || `${cand.primaryComplaintId}-${cand.candidateComplaintId}`,
+        sourceComplaintId:
+          cand.primaryComplaint?.complaintNumber ||
+          (cand.primaryComplaintId === c.id ? (c.complaintNumber || c.id) : cand.primaryComplaintId),
+        targetComplaintId:
+          cand.candidateComplaint?.complaintNumber ||
+          cand.candidateComplaintNumber ||
+          cand.candidateComplaintId,
         signalScore: Math.round((cand.overallScore ?? 0) * 100),
         matchingSignals: [
           {

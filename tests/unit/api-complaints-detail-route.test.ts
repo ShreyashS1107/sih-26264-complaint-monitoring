@@ -47,6 +47,7 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(db.auditLog, 'findFirst').mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -93,6 +94,90 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
       expect(body.data.id).toBe('cmp_test_001');
       expect(body.data.overlaps.count).toBe(1);
       expect(body.data.overlaps.candidates[0].id).toBe('cand_01');
+    });
+
+    it('should return evidentiary attachments and allegations from ingestion audit log when present', async () => {
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
+      vi.spyOn(overlapModule, 'getOverlapCandidatesForComplaint').mockResolvedValue([]);
+      vi.spyOn(db.auditLog, 'findFirst').mockResolvedValue({
+        id: 'aud_ingest_01',
+        entityType: 'COMPLAINT',
+        entityId: 'cmp_test_001',
+        action: 'INGEST_COMPLAINT',
+        details: {
+          evidence: [
+            {
+              id: 'DOC-001',
+              name: 'Demand_Notice.pdf',
+              fileSize: '1.2 MB',
+              uploadDate: '2026-09-12',
+              category: 'Fee Receipt',
+            },
+          ],
+          allegations: ['Unauthorized capitation fee demanded in cash'],
+        },
+      } as any);
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001');
+      const response = await GET(request, {
+        params: Promise.resolve({ id: 'cmp_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.evidence).toHaveLength(1);
+      expect(body.data.evidence[0].name).toBe('Demand_Notice.pdf');
+      expect(body.data.allegations).toEqual(['Unauthorized capitation fee demanded in cash']);
+    });
+
+    it('should return empty evidence array and subject allegation when no evidentiary attachments exist', async () => {
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
+      vi.spyOn(overlapModule, 'getOverlapCandidatesForComplaint').mockResolvedValue([]);
+      vi.spyOn(db.auditLog, 'findFirst').mockResolvedValue(null);
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001');
+      const response = await GET(request, {
+        params: Promise.resolve({ id: 'cmp_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.evidence).toEqual([]);
+      expect(body.data.allegations).toEqual([sampleComplaint.subject]);
+    });
+
+    it('should support lookup by unique complaintNumber as well as CUID id', async () => {
+      const findFirstSpy = vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
+      vi.spyOn(overlapModule, 'getOverlapCandidatesForComplaint').mockResolvedValue([]);
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/CMP-2026-0001');
+      const response = await GET(request, {
+        params: Promise.resolve({ id: 'CMP-2026-0001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(findFirstSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [{ id: 'CMP-2026-0001' }, { complaintNumber: 'CMP-2026-0001' }],
+          },
+        })
+      );
+    });
+
+    it('should return 400 for undefined, null, or empty string ID parameter', async () => {
+      for (const invalidId of ['undefined', 'null', '   ']) {
+        const request = new Request(`http://localhost:3000/api/v1/complaints/${invalidId}`);
+        const response = await GET(request, { params: Promise.resolve({ id: invalidId }) });
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error.code).toBe('INVALID_COMPLAINT_ID');
+      }
     });
   });
 

@@ -142,15 +142,37 @@ async function inspectDatabase() {
       }
     }
 
-    // 4. Existing Complaints sample
+    // 4. Existing Complaints list
     if (complaintCount > 0) {
-      console.log('\nCOMPLAINTS IN DATABASE (first 5):');
+      console.log(`\nCOMPLAINTS IN DATABASE (all ${complaintCount}):`);
       const cmps = await prisma.complaint.findMany({
-        take: 5,
-        select: { id: true, complaintNumber: true, status: true, subject: true },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, complaintNumber: true, status: true, subject: true, createdAt: true },
       });
       for (const c of cmps) {
-        console.log(`  - [${c.complaintNumber}] (${c.status}) ${c.subject.slice(0, 50)}...`);
+        console.log(`  - [${c.complaintNumber}] (${c.status}) ${c.subject.slice(0, 50)}... [${c.createdAt.toISOString().slice(0, 10)}]`);
+      }
+    }
+
+    // 5. Existing Overlap Candidates list
+    if (overlapCandidateCount > 0) {
+      console.log(`\nOVERLAP CANDIDATES IN DATABASE (all ${overlapCandidateCount}):`);
+      const ovls = await prisma.overlapCandidate.findMany({
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          overallScore: true,
+          reviewStatus: true,
+          primaryComplaint: { select: { complaintNumber: true } },
+          candidateComplaint: { select: { complaintNumber: true } },
+        },
+      });
+      for (const o of ovls) {
+        console.log(
+          `  - [${o.primaryComplaint.complaintNumber} ↔ ${o.candidateComplaint.complaintNumber}] Score: ${Math.round(
+            o.overallScore * 100
+          )}% | Status: ${o.reviewStatus} (ID: ${o.id})`
+        );
       }
     }
 

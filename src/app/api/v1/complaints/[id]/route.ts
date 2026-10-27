@@ -112,8 +112,36 @@ export async function GET(_request: Request, context: RouteContext) {
     // Retrieve active overlap candidates for this complaint
     const overlapCandidates = await getOverlapCandidatesForComplaint(complaint.id);
 
+    // Safely retrieve evidentiary attachments and formal allegations from ingestion audit log if present
+    let evidence: unknown[] = [];
+    let allegations: string[] = [complaint.subject];
+    try {
+      const ingestAudit = await db.auditLog.findFirst({
+        where: {
+          entityType: 'COMPLAINT',
+          entityId: complaint.id,
+          action: 'INGEST_COMPLAINT',
+        },
+        orderBy: { timestamp: 'asc' },
+      });
+
+      if (ingestAudit?.details && typeof ingestAudit.details === 'object') {
+        const details = ingestAudit.details as Record<string, unknown>;
+        if (Array.isArray(details.evidence)) {
+          evidence = details.evidence;
+        }
+        if (Array.isArray(details.allegations) && details.allegations.length > 0) {
+          allegations = details.allegations as string[];
+        }
+      }
+    } catch {
+      // Ingest audit retrieval optional
+    }
+
     return apiSuccess({
       ...complaint,
+      evidence,
+      allegations,
       overlaps: {
         count: overlapCandidates.length,
         candidates: overlapCandidates,

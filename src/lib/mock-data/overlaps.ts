@@ -101,4 +101,46 @@ export const DEMO_OVERLAPS: OverlapCandidate[] = [
     adjudicationNote:
       "Institutions are distinct and located in different regions (Maharashtra vs West Bengal). No common personnel or shared institutional pattern; confirmed independent.",
   },
+  {
+    id: "OVL-2026-05",
+    sourceComplaintId: "AICTE-2026-8407",
+    targetComplaintId: "AICTE-2026-8408",
+    signalScore: 79,
+    matchingSignals: [
+      {
+        type: "Same Institution ID",
+        detail: "Both cases target 1-30495821 (Karnataka College of Engineering & Research)",
+      },
+      {
+        type: "Text Similarity",
+        detail: "74% correlation between intake expansion and departmental faculty cadre compliance",
+      },
+      {
+        type: "Temporal Proximity",
+        detail: "Filed within 6 calendar days",
+      },
+    ],
+    reviewStatus: "Pending",
+  },
+  {
+    id: "OVL-2026-06",
+    sourceComplaintId: "AICTE-2026-8403",
+    targetComplaintId: "AICTE-2026-8412",
+    signalScore: 86,
+    matchingSignals: [
+      {
+        type: "Same Institution ID",
+        detail: "Both cases target 1-20948571 (Delhi NCR Technical Institute)",
+      },
+      {
+        type: "Text Similarity",
+        detail: "81% correlation regarding unapproved postgraduate programme offerings and advertised admission brochures",
+      },
+      {
+        type: "Temporal Proximity",
+        detail: "Filed within 3 calendar days",
+      },
+    ],
+    reviewStatus: "Pending",
+  },
 ];

@@ -159,6 +159,8 @@ export async function POST(request: Request, context: RouteContext) {
         'OVL-2026-02': ['AICTE-2026-8403', 'AICTE-2026-8404'],
         'OVL-2026-03': ['AICTE-2026-8405', 'AICTE-2026-8406'],
         'OVL-2026-04': ['AICTE-2026-8401', 'AICTE-2026-8410'],
+        'OVL-2026-05': ['AICTE-2026-8407', 'AICTE-2026-8408'],
+        'OVL-2026-06': ['AICTE-2026-8403', 'AICTE-2026-8412'],
       };
 
       const mappedPair = DEMO_OVERLAP_PAIRS[id];

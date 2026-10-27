@@ -31,6 +31,8 @@ export interface EvidenceDocument {
 
 export interface Complaint {
   id: string;
+  complaintNumber?: string;
+  dbId?: string;
   title: string;
   institutionId: string;
   institutionName: string;

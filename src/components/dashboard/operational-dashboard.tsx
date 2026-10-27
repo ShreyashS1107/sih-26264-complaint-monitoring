@@ -101,8 +101,18 @@ export const OperationalDashboard: React.FC = () => {
     return overlaps
       .filter((o) => o.reviewStatus === "Pending")
       .map((ovl) => {
-        const source = complaints.find((c) => c.id === ovl.sourceComplaintId);
-        const target = complaints.find((c) => c.id === ovl.targetComplaintId);
+        const source = complaints.find(
+          (c) =>
+            c.id === ovl.sourceComplaintId ||
+            c.complaintNumber === ovl.sourceComplaintId ||
+            (c as any).dbId === ovl.sourceComplaintId
+        );
+        const target = complaints.find(
+          (c) =>
+            c.id === ovl.targetComplaintId ||
+            c.complaintNumber === ovl.targetComplaintId ||
+            (c as any).dbId === ovl.targetComplaintId
+        );
         return {
           ...ovl,
           source,

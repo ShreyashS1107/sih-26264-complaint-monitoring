@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, Suspense } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { useComplaints } from "../../../lib/context/complaint-context";
+import { apiClient } from "../../../lib/api-client";
 import {
   IconChevronLeft,
   IconBuilding,
@@ -17,7 +18,7 @@ import {
   IconArrowRight,
 } from "../../../components/ui/icons";
 import { StatusBadge, PriorityBadge, OverlapStatusBadge, Badge } from "../../../components/ui/badge";
-import { OverlapReviewStatus } from "../../../lib/types";
+import { Complaint, OverlapReviewStatus } from "../../../lib/types";
 import { fadeInUpVariants, staggerContainerVariants } from "../../../lib/motion";
 
 function OverlapCompareContent() {
@@ -25,27 +26,106 @@ function OverlapCompareContent() {
   const sourceId = searchParams.get("source") || "";
   const targetId = searchParams.get("target") || "";
 
-  const { complaints, overlaps, adjudicateOverlap } = useComplaints();
+  const { complaints, overlaps, adjudicateOverlap, isLoading: isContextLoading } = useComplaints();
 
-  // 1. Resolve both complaints
-  const sourceComplaint = useMemo(
-    () => complaints.find((c) => c.id === sourceId),
+  // 1. Resolve complaints from context first
+  const contextSource = useMemo(
+    () =>
+      complaints.find(
+        (c) =>
+          c.id === sourceId ||
+          c.complaintNumber === sourceId ||
+          (c as any).dbId === sourceId
+      ),
     [complaints, sourceId]
   );
-  const targetComplaint = useMemo(
-    () => complaints.find((c) => c.id === targetId),
+  const contextTarget = useMemo(
+    () =>
+      complaints.find(
+        (c) =>
+          c.id === targetId ||
+          c.complaintNumber === targetId ||
+          (c as any).dbId === targetId
+      ),
     [complaints, targetId]
   );
 
-  // 2. Resolve matching candidate pair (checking both orientations)
+  const [directSource, setDirectSource] = useState<Complaint | null>(null);
+  const [directTarget, setDirectTarget] = useState<Complaint | null>(null);
+  const [resolvedPair, setResolvedPair] = useState<string | null>(null);
+
+  const currentPairKey = `${sourceId || ""}:${targetId || ""}`;
+  const isResolvingDossiers =
+    (!contextSource || !contextTarget) &&
+    Boolean(sourceId && targetId && sourceId !== targetId) &&
+    resolvedPair !== currentPairKey;
+
+  useEffect(() => {
+    if (contextSource && contextTarget) {
+      return;
+    }
+
+    if (!sourceId || !targetId || sourceId === targetId) {
+      return;
+    }
+
+    let active = true;
+
+    const promises: Promise<unknown>[] = [];
+    if (!contextSource) {
+      promises.push(
+        apiClient
+          .getComplaint(sourceId)
+          .then((c) => {
+            if (active) setDirectSource(c);
+          })
+          .catch(() => {})
+      );
+    }
+    if (!contextTarget) {
+      promises.push(
+        apiClient
+          .getComplaint(targetId)
+          .then((c) => {
+            if (active) setDirectTarget(c);
+          })
+          .catch(() => {})
+      );
+    }
+
+    Promise.all(promises).finally(() => {
+      if (active) {
+        setResolvedPair(currentPairKey);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [contextSource, contextTarget, sourceId, targetId, currentPairKey]);
+
+  const sourceComplaint = contextSource || directSource;
+  const targetComplaint = contextTarget || directTarget;
+
+  // 2. Resolve matching candidate pair (checking both orientations and all identifier aliases)
   const candidate = useMemo(() => {
     if (!sourceId || !targetId) return undefined;
+    const sId = sourceComplaint?.id || sourceId;
+    const sNum = sourceComplaint?.complaintNumber;
+    const sDb = (sourceComplaint as any)?.dbId;
+    const tId = targetComplaint?.id || targetId;
+    const tNum = targetComplaint?.complaintNumber;
+    const tDb = (targetComplaint as any)?.dbId;
+
+    const sourceSet = new Set([sourceId, sId, sNum, sDb].filter(Boolean));
+    const targetSet = new Set([targetId, tId, tNum, tDb].filter(Boolean));
+
     return overlaps.find(
       (o) =>
-        (o.sourceComplaintId === sourceId && o.targetComplaintId === targetId) ||
-        (o.sourceComplaintId === targetId && o.targetComplaintId === sourceId)
+        (sourceSet.has(o.sourceComplaintId) && targetSet.has(o.targetComplaintId)) ||
+        (sourceSet.has(o.targetComplaintId) && targetSet.has(o.sourceComplaintId))
     );
-  }, [overlaps, sourceId, targetId]);
+  }, [overlaps, sourceId, targetId, sourceComplaint, targetComplaint]);
 
   // Adjudication form state
   const [selectedVerdict, setSelectedVerdict] = useState<OverlapReviewStatus | "Pass">(
@@ -101,6 +181,19 @@ function OverlapCompareContent() {
             <span>Return to Overlap Review Queue</span>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Loading state while searching context and querying backend
+  if ((!sourceComplaint || !targetComplaint) && (isContextLoading || isResolvingDossiers)) {
+    return (
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-12 text-center shadow-xs">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary-accent)] border-t-transparent mb-3" />
+        <h2 className="text-base font-bold text-[var(--text-primary)]">Loading Dossier Comparison...</h2>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          Retrieving side-by-side allegations and evidence for <span className="font-mono font-semibold text-[var(--text-primary)]">{sourceId}</span> and <span className="font-mono font-semibold text-[var(--text-primary)]">{targetId}</span>.
+        </p>
       </div>
     );
   }
@@ -385,18 +478,26 @@ function OverlapCompareContent() {
 
           {/* Evidentiary Attachments */}
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] font-mono">Evidence Exhibits ({sourceComplaint.evidence.length})</span>
-            <div className="mt-1 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] p-2 bg-[var(--bg-surface-subtle)]">
-              {sourceComplaint.evidence.map((doc) => (
-                <div key={doc.id} className="py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <IconFileText size={14} className="text-[var(--primary-accent)] shrink-0" />
-                    <span className="truncate font-bold text-[var(--text-primary)]">{doc.name}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] font-mono">
+              Evidence Exhibits ({(sourceComplaint.evidence || []).length})
+            </span>
+            {!sourceComplaint.evidence || sourceComplaint.evidence.length === 0 ? (
+              <div className="mt-1 p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-center text-xs text-[var(--text-muted)] italic">
+                No dossier documents uploaded yet
+              </div>
+            ) : (
+              <div className="mt-1 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] p-2 bg-[var(--bg-surface-subtle)]">
+                {sourceComplaint.evidence.map((doc) => (
+                  <div key={doc.id} className="py-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <IconFileText size={14} className="text-[var(--primary-accent)] shrink-0" />
+                      <span className="truncate font-bold text-[var(--text-primary)]">{doc.name}</span>
+                    </div>
+                    <span className="text-[10px] text-[var(--text-secondary)] tabular-nums shrink-0 font-mono">{doc.fileSize}</span>
                   </div>
-                  <span className="text-[10px] text-[var(--text-secondary)] tabular-nums shrink-0 font-mono">{doc.fileSize}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -490,18 +591,26 @@ function OverlapCompareContent() {
 
           {/* Evidentiary Attachments */}
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] font-mono">Evidence Exhibits ({targetComplaint.evidence.length})</span>
-            <div className="mt-1 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] p-2 bg-[var(--bg-surface-subtle)]">
-              {targetComplaint.evidence.map((doc) => (
-                <div key={doc.id} className="py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <IconFileText size={14} className="text-[var(--primary-accent)] shrink-0" />
-                    <span className="truncate font-bold text-[var(--text-primary)]">{doc.name}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] font-mono">
+              Evidence Exhibits ({(targetComplaint.evidence || []).length})
+            </span>
+            {!targetComplaint.evidence || targetComplaint.evidence.length === 0 ? (
+              <div className="mt-1 p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-center text-xs text-[var(--text-muted)] italic">
+                No dossier documents uploaded yet
+              </div>
+            ) : (
+              <div className="mt-1 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] p-2 bg-[var(--bg-surface-subtle)]">
+                {targetComplaint.evidence.map((doc) => (
+                  <div key={doc.id} className="py-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <IconFileText size={14} className="text-[var(--primary-accent)] shrink-0" />
+                      <span className="truncate font-bold text-[var(--text-primary)]">{doc.name}</span>
+                    </div>
+                    <span className="text-[10px] text-[var(--text-secondary)] tabular-nums shrink-0 font-mono">{doc.fileSize}</span>
                   </div>
-                  <span className="text-[10px] text-[var(--text-secondary)] tabular-nums shrink-0 font-mono">{doc.fileSize}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
