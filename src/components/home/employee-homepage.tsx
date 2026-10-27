@@ -140,20 +140,20 @@ export const EmployeeHomepage: React.FC = () => {
             </Link>
           </nav>
 
-          {/* Right: Action Controls (Theme Customizer, Demo Login, User Profile) */}
+          {/* Right: Action Controls (Theme Customizer, Officer Login, User Profile) */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
             {/* Theme & Palette Controls */}
             <div className="flex items-center shrink-0">
               <ThemeCustomizer />
             </div>
 
-            {/* Demo Login Button */}
+            {/* Officer Login Button */}
             <div className="flex items-center shrink-0">
               <Link
                 href="/login"
                 className="hidden sm:inline-flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] hover:bg-[var(--bg-surface-subtle)] transition-colors shadow-2xs whitespace-nowrap shrink-0"
               >
-                Demo Login
+                Officer Login
               </Link>
             </div>
 
@@ -240,7 +240,7 @@ export const EmployeeHomepage: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-center w-full py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] transition-colors"
               >
-                Demo Login
+                Officer Login
               </Link>
             </div>
           </div>

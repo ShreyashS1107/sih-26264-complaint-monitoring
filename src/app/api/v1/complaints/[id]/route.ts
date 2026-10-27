@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess } from '@/lib/api-response';
+import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
 import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
@@ -195,16 +195,22 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    // 3. Verify existing complaint
-    const existing = await db.complaint.findUnique({
-      where: { id },
+    // 3. Verify existing complaint by primary key ID or unique complaintNumber
+    const existing = await db.complaint.findFirst({
+      where: {
+        OR: [{ id }, { complaintNumber: id }],
+      },
       include: {
         bureau: true,
       },
     });
 
     if (!existing) {
-      return apiError('COMPLAINT_NOT_FOUND', `Complaint with ID '${id}' was not found.`, 404);
+      return apiError(
+        'COMPLAINT_NOT_FOUND',
+        `Complaint with identifier '${id}' was not found.`,
+        404
+      );
     }
 
     // 4. Enforce bureau authorization when an authenticated officer is present
@@ -268,7 +274,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
 
       const updated = await tx.complaint.update({
-        where: { id },
+        where: { id: existing.id },
         data: updateData,
         include: {
           institution: true,
@@ -292,7 +298,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
       await tx.caseAction.create({
         data: {
-          complaintId: id,
+          complaintId: existing.id,
           officerId: officer?.id ?? null,
           actionType,
           previousStatus: existing.status,
@@ -307,7 +313,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       await createAuditLog(
         {
           entityType: 'COMPLAINT',
-          entityId: id,
+          entityId: existing.id,
           action: 'UPDATE_COMPLAINT',
           actorId: officer?.id ?? null,
           actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
@@ -333,9 +339,191 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return apiSuccess({ complaint: updatedComplaint });
   } catch (_error: unknown) {
+    logServerError('PATCH /api/v1/complaints/[id]', _error);
     return apiError(
       'INTERNAL_SERVER_ERROR',
       'An unexpected error occurred while updating the complaint.',
+      500
+    );
+  }
+}
+
+/**
+ * DELETE /api/v1/complaints/[id]
+ *
+ * Removes or archives a complaint record while preserving referential integrity
+ * and tamper-evident audit history.
+ *
+ * Security & Authorization:
+ * - Requires authenticated officer session.
+ * - Central Administrator can delete any complaint.
+ * - Bureau officers can only delete/archive complaints belonging to their assigned bureau.
+ * - Unauthenticated or unauthorized callers are rejected with 401/403.
+ *
+ * Referential Integrity:
+ * - If dependent records exist (case actions, overlap candidate pairs), uses an
+ *   archive strategy (transitions status to DISMISSED with deletion audit marker)
+ *   so official audit history and related cases are never broken or dangling.
+ * - If no dependent records exist, performs a clean database deletion.
+ */
+export async function DELETE(request: Request, context: RouteContext) {
+  try {
+    const rawParams = await context.params;
+    const id = rawParams?.id?.trim();
+
+    if (!id || id === '' || id === 'undefined' || id === 'null') {
+      return apiError(
+        'INVALID_COMPLAINT_ID',
+        'Complaint ID parameter must be a non-empty string.',
+        400
+      );
+    }
+
+    // 1. Resolve identity and verify authenticated / prototype access
+    const officer = await resolveAuthenticatedOfficer(request);
+    const access = checkPrototypeMutationAccess(request, officer);
+
+    if (!access.allowed) {
+      return apiError(
+        access.error || 'UNAUTHORIZED',
+        access.message || 'Authentication required to delete complaint records.',
+        access.status || 401
+      );
+    }
+
+    // 2. Verify existing complaint by primary key or complaintNumber
+    const existing = await db.complaint.findFirst({
+      where: {
+        OR: [{ id }, { complaintNumber: id }],
+      },
+      include: {
+        bureau: true,
+      },
+    });
+
+    if (!existing) {
+      return apiError(
+        'COMPLAINT_NOT_FOUND',
+        `Complaint with identifier '${id}' was not found.`,
+        404
+      );
+    }
+
+    // 3. Enforce bureau authorization
+    if (
+      officer &&
+      officer.role !== 'CENTRAL_ADMIN' &&
+      officer.bureauId !== existing.bureauId &&
+      existing.assignedOfficerId !== officer.id
+    ) {
+      return apiError(
+        'FORBIDDEN',
+        'You are not authorized to delete complaints belonging to another bureau.',
+        403
+      );
+    }
+
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+
+    // 4. Inspect dependent records
+    const [actionCount, overlapCount] = await Promise.all([
+      db.caseAction.count({ where: { complaintId: existing.id } }),
+      db.overlapCandidate.count({
+        where: {
+          OR: [
+            { primaryComplaintId: existing.id },
+            { candidateComplaintId: existing.id },
+          ],
+        },
+      }),
+    ]);
+
+    const hasDependentRecords = actionCount > 0 || overlapCount > 0;
+
+    await db.$transaction(async (tx) => {
+      if (hasDependentRecords) {
+        // Soft-delete/archive: preserve history and mark dismissed
+        await tx.complaint.update({
+          where: { id: existing.id },
+          data: { status: 'DISMISSED' },
+        });
+
+        await tx.caseAction.create({
+          data: {
+            complaintId: existing.id,
+            officerId: officer?.id ?? null,
+            actionType: 'STATUS_CHANGE',
+            previousStatus: existing.status,
+            newStatus: 'DISMISSED',
+            notes: 'Complaint archived via administrative deletion workflow.',
+            metadata: {
+              archived: true,
+              deletedBy: officer?.name ?? 'Authorized Officer',
+              prototypeAccess: !officer,
+            },
+          },
+        });
+
+        await createAuditLog(
+          {
+            entityType: 'COMPLAINT',
+            entityId: existing.id,
+            action: 'ARCHIVE_COMPLAINT',
+            actorId: officer?.id ?? null,
+            actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
+            bureauId: existing.bureauId,
+            ipAddress,
+            details: {
+              strategy: 'archive_preserve_relations',
+              complaintNumber: existing.complaintNumber,
+              previousStatus: existing.status,
+              actionCount,
+              overlapCount,
+              prototypeAccess: !officer,
+            },
+          },
+          tx
+        );
+      } else {
+        // Clean delete: no dependent records exist
+        await tx.complaint.delete({
+          where: { id: existing.id },
+        });
+
+        await createAuditLog(
+          {
+            entityType: 'COMPLAINT',
+            entityId: existing.id,
+            action: 'DELETE_COMPLAINT',
+            actorId: officer?.id ?? null,
+            actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
+            bureauId: existing.bureauId,
+            ipAddress,
+            details: {
+              strategy: 'hard_delete',
+              complaintNumber: existing.complaintNumber,
+              prototypeAccess: !officer,
+            },
+          },
+          tx
+        );
+      }
+    });
+
+    return apiSuccess({
+      action: hasDependentRecords ? 'ARCHIVED' : 'DELETED',
+      message: hasDependentRecords
+        ? `Complaint '${existing.complaintNumber}' has dependent history and was safely soft-deleted/archived.`
+        : `Complaint '${existing.complaintNumber}' was successfully deleted.`,
+      complaintId: existing.id,
+      complaintNumber: existing.complaintNumber,
+      strategy: hasDependentRecords ? 'archived' : 'deleted',
+    });
+  } catch (_error: unknown) {
+    logServerError('DELETE /api/v1/complaints/[id]', _error);
+    return apiError(
+      'INTERNAL_SERVER_ERROR',
+      'An unexpected error occurred while deleting the complaint.',
       500
     );
   }

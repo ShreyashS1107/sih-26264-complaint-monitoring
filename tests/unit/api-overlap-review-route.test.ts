@@ -319,5 +319,155 @@ describe('Overlap Review Routes (/api/v1/overlap-candidates)', () => {
       expect(body.success).toBe(true);
       expect(body.data.candidate.reviewStatus).toBe('CONFIRMED_OVERLAP');
     });
+
+    it('should successfully record verdict "Pass" with mandatory rationale and institutional directive', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue(sampleCandidate as any);
+
+      const mockUpdated = {
+        ...sampleCandidate,
+        reviewStatus: 'DISMISSED_INDEPENDENT',
+        reviewNotes: 'Clear difference in faculty allegations. Institutional Directive: Issue compliance notice regarding student quota.',
+        reviewedById: mockOfficer.id,
+        reviewedAt: new Date(),
+      };
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (callback: any) => {
+        return callback({
+          overlapCandidate: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+          },
+          caseAction: {
+            createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_review_02' }),
+          },
+        });
+      });
+
+      const request = new Request(
+        'http://localhost:3000/api/v1/overlap-candidates/cand_test_001/review',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            verdict: 'Pass',
+            rationale: 'Clear difference in faculty allegations.',
+            institutionalDirective: 'Issue compliance notice regarding student quota.',
+          }),
+        }
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({ id: 'cand_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.candidate.reviewStatus).toBe('DISMISSED_INDEPENDENT');
+      expect(body.data.candidate.reviewNotes).toContain('Institutional Directive:');
+    });
+
+    it('should resolve and record adjudication for queue identifier OVL-2026-02', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue(null);
+      vi.spyOn(db.overlapCandidate, 'findFirst').mockResolvedValue(sampleCandidate as any);
+
+      const mockUpdated = {
+        ...sampleCandidate,
+        reviewStatus: 'DISMISSED_INDEPENDENT',
+        reviewNotes: 'No overlap between 8403 and 8404.',
+        reviewedById: mockOfficer.id,
+        reviewedAt: new Date(),
+      };
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (callback: any) => {
+        return callback({
+          overlapCandidate: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+          },
+          caseAction: {
+            createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_review_03' }),
+          },
+        });
+      });
+
+      const request = new Request(
+        'http://localhost:3000/api/v1/overlap-candidates/OVL-2026-02/review',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            verdict: 'Pass',
+            rationale: 'No overlap between 8403 and 8404.',
+            institutionalDirective: 'None',
+          }),
+        }
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({ id: 'OVL-2026-02' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.candidate.reviewStatus).toBe('DISMISSED_INDEPENDENT');
+    });
+
+    it('should return 400 when mandatory rationale / notes is missing or too short', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue(sampleCandidate as any);
+
+      const request = new Request(
+        'http://localhost:3000/api/v1/overlap-candidates/cand_test_001/review',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            verdict: 'Pass',
+            rationale: '   ',
+          }),
+        }
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({ id: 'cand_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should return 400 when verdict is completely invalid', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue(sampleCandidate as any);
+
+      const request = new Request(
+        'http://localhost:3000/api/v1/overlap-candidates/cand_test_001/review',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            verdict: 'INVALID_VERDICT_XYZ',
+            rationale: 'Some rationale here for review',
+          }),
+        }
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({ id: 'cand_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
   });
 });

@@ -103,7 +103,7 @@ export default function LoginPage() {
               style={{ backgroundColor: 'var(--primary-accent)' }}
             />
             <span className="text-[var(--text-secondary)] font-mono uppercase tracking-wider">
-              Prototype Demonstration Gate
+              AICTE Security Access Gateway
             </span>
           </div>
 
@@ -115,22 +115,22 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Demo Mode Notice Banner */}
+        {/* Streamlined Access Notice Banner */}
         <div className="my-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--primary-accent-subtle)] p-3.5 text-xs text-[var(--text-primary)] flex items-start gap-3">
           <IconSparkles size={18} className="text-[var(--primary-accent)] shrink-0 mt-0.5" />
           <div className="space-y-1">
             <div className="font-bold flex items-center gap-1.5">
-              <span>Frictionless Demo Login</span>
-              <Badge variant="warning" size="sm" className="font-mono text-[9px] uppercase">
-                Demo
+              <span>Quick Officer Sign-in</span>
+              <Badge variant="neutral" size="sm" className="font-mono text-[9px] uppercase">
+                Portal Access
               </Badge>
             </div>
             <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-              No credentials required. You may leave all fields completely empty and click{' '}
+              Standard scrutiny session access. You may click{' '}
               <strong className="text-[var(--text-primary)] font-semibold">
-                &ldquo;Enter Portal (Demo Login)&rdquo;
+                &ldquo;Enter Portal&rdquo;
               </strong>{' '}
-              to enter the dashboard immediately.
+              to proceed directly to the administrative dashboard.
             </p>
           </div>
         </div>
@@ -222,13 +222,13 @@ export default function LoginPage() {
                 boxShadow: '0 4px 18px -2px var(--primary-accent-glow)',
               }}
             >
-              <span>{isSubmitting ? 'Entering Portal...' : 'Enter Portal (Demo Login)'}</span>
+              <span>{isSubmitting ? 'Entering Portal...' : 'Enter Portal'}</span>
               <IconArrowRight size={16} />
             </button>
           </div>
         </form>
 
-        {/* Sample Accounts for Quick Demo Testing */}
+        {/* Sample Accounts for Quick Officer Sign-in */}
         <div className="mt-6 pt-5 border-t border-[var(--border-subtle)]">
           <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2.5">
             Quick Fill Sample Officer Identity (Optional)

@@ -123,13 +123,13 @@ export const OfficerLoginModal: React.FC = () => {
               </div>
             )}
 
-            {/* Frictionless Demo Notice */}
+            {/* Streamlined Officer Access Notice */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--primary-accent-subtle)] p-3 text-xs text-[var(--text-primary)] flex items-start gap-2.5">
               <IconSparkles size={16} className="text-[var(--primary-accent)] shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <span className="font-bold block">Prototype Demo Login</span>
+                <span className="font-bold block">Officer Portal Access</span>
                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                  You can click &ldquo;Enter Portal (Demo Login)&rdquo; directly without filling any fields to access the dashboard.
+                  You can click &ldquo;Enter Portal&rdquo; directly to access the administrative dashboard.
                 </p>
               </div>
             </div>
@@ -186,7 +186,7 @@ export const OfficerLoginModal: React.FC = () => {
                     boxShadow: '0 2px 12px var(--primary-accent-glow)',
                   }}
                 >
-                  <span>{isSubmitting ? 'Entering...' : 'Enter Portal (Demo Login)'}</span>
+                  <span>{isSubmitting ? 'Entering...' : 'Enter Portal'}</span>
                   <IconArrowRight size={14} />
                 </button>
               </div>

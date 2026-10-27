@@ -116,4 +116,35 @@ describe('Officer Login Route & Validation (/api/v1/auth/login)', () => {
     expect(body.data.officer.name).toBe('Dr. S. K. Rao (Central Admin)');
     expect(res.headers.get('set-cookie')).toBeDefined();
   });
+
+  it('ensures user-facing login page and modal wording no longer contains "Demo"', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const loginPageContent = fs.readFileSync(
+      path.resolve(__dirname, '../../src/app/login/page.tsx'),
+      'utf-8'
+    );
+    const modalContent = fs.readFileSync(
+      path.resolve(__dirname, '../../src/components/auth/officer-login-modal.tsx'),
+      'utf-8'
+    );
+    const homepageContent = fs.readFileSync(
+      path.resolve(__dirname, '../../src/components/home/employee-homepage.tsx'),
+      'utf-8'
+    );
+
+    // Verify login page UI text
+    expect(loginPageContent).not.toContain('Prototype Demonstration Gate');
+    expect(loginPageContent).not.toContain('Frictionless Demo Login');
+    expect(loginPageContent).not.toContain('Enter Portal (Demo Login)');
+    expect(loginPageContent).not.toContain('>Demo<');
+
+    // Verify modal UI text
+    expect(modalContent).not.toContain('Prototype Demo Login');
+    expect(modalContent).not.toContain('Enter Portal (Demo Login)');
+
+    // Verify homepage navigation
+    expect(homepageContent).not.toContain('Demo Login');
+  });
 });

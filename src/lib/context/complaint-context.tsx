@@ -14,7 +14,6 @@ import { DEMO_COMPLAINTS } from '../mock-data/complaints';
 import { DEMO_OVERLAPS } from '../mock-data/overlaps';
 import { DEMO_AUDIT_LOGS } from '../mock-data/audit';
 import { apiClient, ApiError, BackendDashboardSummary } from '../api-client';
-import { scanForOverlapCandidates, ComplaintInput } from '../../modules/overlap-detection/engine';
 import { AuthenticatedOfficer } from '../auth';
 
 export type BackendConnectionStatus = 'checking' | 'connected' | 'offline' | 'error';
@@ -51,12 +50,20 @@ interface ComplaintContextType {
   isSubmitting: boolean;
   clearActionError: () => void;
   refreshData: () => Promise<void>;
-  updateComplaintStatus: (id: string, status: ComplaintStatus, note?: string) => Promise<boolean>;
+  updateComplaintStatus: (
+    id: string,
+    status: ComplaintStatus,
+    note?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  deleteComplaint: (
+    id: string
+  ) => Promise<{ success: boolean; action?: 'DELETED' | 'ARCHIVED'; error?: string }>;
   adjudicateOverlap: (
     overlapId: string,
-    decision: OverlapReviewStatus,
+    decision: OverlapReviewStatus | string,
     note: string,
-    officerName?: string
+    officerName?: string,
+    directive?: string
   ) => Promise<boolean>;
   submitComplaint: (input: ComplaintSubmissionInput) => Promise<ComplaintSubmissionResult>;
   currentOfficer: any | null;
@@ -197,7 +204,11 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Update a complaint status with server-side validation and fail-closed handling
   const updateComplaintStatus = useCallback(
-    async (id: string, newStatus: ComplaintStatus, note?: string): Promise<boolean> => {
+    async (
+      id: string,
+      newStatus: ComplaintStatus,
+      note?: string
+    ): Promise<{ success: boolean; error?: string }> => {
       setIsSubmitting(true);
       setActionError(null);
 
@@ -215,48 +226,84 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const newAudit: AuditEvent = {
           id: `AUD-${Date.now()}`,
           complaintId: id,
-          actor: 'Authorized Scrutiny Officer',
+          actor: currentOfficer?.name || 'Authorized Scrutiny Officer',
           action: `Status Updated to ${newStatus}`,
           details: noteText,
           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
         };
         setAuditLogs((prev) => [newAudit, ...prev]);
 
-        return true;
+        return { success: true };
       } catch (err: unknown) {
-        if (err instanceof ApiError) {
-          setActionError({
-            title: 'Backend API Error',
-            code: err.code,
-            status: err.status,
-            endpoint: `PATCH /api/v1/complaints/${id}`,
-            message: err.message,
-            details: err.details,
-          });
-        } else {
-          setActionError({
-            title: 'Network Connection Failure',
-            code: 'NETWORK_ERROR',
-            status: 0,
-            endpoint: `PATCH /api/v1/complaints/${id}`,
-            message: err instanceof Error ? err.message : 'Unable to reach the backend API server.',
-          });
-        }
-        return false;
+        const errorMsg =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+            ? err.message
+            : 'Failed to update complaint status';
+        return { success: false, error: errorMsg };
       } finally {
         setIsSubmitting(false);
       }
     },
-    []
+    [currentOfficer]
+  );
+
+  // Delete or archive a complaint
+  const deleteComplaint = useCallback(
+    async (
+      id: string
+    ): Promise<{ success: boolean; action?: 'DELETED' | 'ARCHIVED'; error?: string }> => {
+      setIsSubmitting(true);
+      setActionError(null);
+
+      try {
+        const res = await apiClient.deleteComplaint(id);
+
+        if (res.action === 'DELETED') {
+          setComplaints((prev) => prev.filter((item) => item.id !== id));
+        } else {
+          setComplaints((prev) =>
+            prev.map((item) =>
+              item.id === id ? { ...item, status: 'Closed' as ComplaintStatus } : item
+            )
+          );
+        }
+
+        const newAudit: AuditEvent = {
+          id: `AUD-${Date.now()}`,
+          complaintId: id,
+          actor: currentOfficer?.name || 'Authorized Scrutiny Officer',
+          action: res.action === 'ARCHIVED' ? 'Complaint Archived' : 'Complaint Deleted',
+          details: res.message,
+          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        };
+        setAuditLogs((prev) => [newAudit, ...prev]);
+
+        return { success: true, action: res.action };
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+            ? err.message
+            : 'Failed to delete complaint';
+        return { success: false, error: errorMsg };
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [currentOfficer]
   );
 
   // Adjudicate an overlap pair with backend review submission
   const adjudicateOverlap = useCallback(
     async (
       overlapId: string,
-      decision: OverlapReviewStatus,
+      decision: OverlapReviewStatus | string,
       note: string,
-      officerName: string = 'Dr. S. K. Rao (Apex Scrutiny Officer)'
+      officerName: string = 'Dr. S. K. Rao (Apex Scrutiny Officer)',
+      directive?: string
     ): Promise<boolean> => {
       setIsSubmitting(true);
       setActionError(null);
@@ -265,11 +312,18 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       try {
         // Attempt actual backend POST review request
-        await apiClient.reviewOverlap(overlapId, decision, noteText);
+        await apiClient.reviewOverlap(overlapId, decision, noteText, directive);
 
         // Server confirmed: update local state
         let affectedSourceId = '';
         let affectedTargetId = '';
+
+        const finalStatus: OverlapReviewStatus =
+          decision === 'Linked'
+            ? 'Linked'
+            : decision === 'Independent' || decision === 'Dismissed' || decision === 'Pass'
+            ? 'Independent'
+            : 'Pending';
 
         setOverlaps((prev) =>
           prev.map((item) => {
@@ -278,7 +332,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               affectedTargetId = item.targetComplaintId;
               return {
                 ...item,
-                reviewStatus: decision,
+                reviewStatus: finalStatus,
                 adjudicatedBy: officerName,
                 adjudicatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
                 adjudicationNote: noteText,
@@ -441,180 +495,52 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setActionError(null);
 
       try {
-        if (backendStatus === 'connected') {
-          // Prototype access: directly submits to live database without requiring an officer login
-          const res = await apiClient.createComplaint({
-            institutionId: input.institutionId,
-            permanentId: input.permanentId,
-            institutionName: input.institutionName,
-            state: input.state,
-            district: input.district,
-            bureau: input.bureau,
-            bureauId: input.bureauId || currentOfficer?.bureau?.id || currentOfficer?.bureauId,
-            assignedOfficerId: currentOfficer?.id,
-            subject: input.subject,
-            description: input.description,
-            category: input.category,
-            priority: input.priority,
-            complainantType: input.complainantType,
-            complainantMaskedId: input.complainantMaskedId,
-            allegations: input.allegations,
-            evidence: input.evidence,
-          });
+        const res = await apiClient.createComplaint({
+          institutionId: input.institutionId,
+          permanentId: input.permanentId,
+          institutionName: input.institutionName,
+          state: input.state,
+          district: input.district,
+          bureau: input.bureau,
+          bureauId: input.bureauId || currentOfficer?.bureau?.id || currentOfficer?.bureauId,
+          assignedOfficerId: currentOfficer?.id,
+          subject: input.subject,
+          description: input.description,
+          category: input.category,
+          priority: input.priority,
+          complainantType: input.complainantType,
+          complainantMaskedId: input.complainantMaskedId,
+          allegations: input.allegations,
+          evidence: input.evidence,
+        });
 
-          // Add to local state
-          setComplaints((prev) => [res.complaint, ...prev]);
-          if (res.overlaps.length > 0) {
-            setOverlaps((prev) => [...res.overlaps, ...prev]);
-          }
-
-          const newAudit: AuditEvent = {
-            id: `AUD-${Date.now()}`,
-            complaintId: res.complaint.id,
-            actor: currentOfficer?.name || 'Apex Scrutiny Reviewer (Prototype)',
-            action: 'Ingested Grievance via Portal',
-            details: `Registered ${res.complaint.id} (${res.complaint.bureau}) with ${res.overlaps.length} cross-bureau overlap candidates flagged`,
-            timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-          };
-          setAuditLogs((prev) => [newAudit, ...prev]);
-
-          return {
-            success: true,
-            complaint: res.complaint,
-            overlaps: res.overlaps,
-            mode: 'live-backend',
-            evaluatedPoolSize: res.rawResult.evaluatedPoolSize,
-            detectedCandidateCount: res.rawResult.detectedCandidateCount,
-          };
-        } else {
-          // Local Demo / Offline Fallback: Run pure deterministic algorithm on local state
-          const newId = `AICTE-2026-${Math.floor(8500 + Math.random() * 900)}`;
-          const filingDate = new Date().toISOString().slice(0, 10);
-          const deadlineDate = new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
-
-          const newComplaint: Complaint = {
-            id: newId,
-            title: input.subject,
-            institutionId: input.permanentId || input.institutionId || 'AICTE-INST-8821',
-            institutionName: input.institutionName,
-            region: input.district || 'Western',
-            state: input.state || 'Maharashtra',
-            bureau: input.bureau,
-            category: input.category,
-            complainantType: input.complainantType,
-            filingDate,
-            deadlineDate,
-            priority: input.priority,
-            status: 'Under Scrutiny',
-            description: input.description,
-            allegations: input.allegations.length > 0 ? input.allegations : [input.subject],
-            evidence: input.evidence,
-            relatedCaseIds: [],
-          };
-
-          // Convert current complaints pool into ComplaintInput format for engine
-          const targetInput: ComplaintInput = {
-            id: newComplaint.id,
-            complaintNumber: newComplaint.id,
-            originalBureauRef: `BUR-${Date.now().toString().slice(-6)}`,
-            bureauId: newComplaint.bureau,
-            institutionId: newComplaint.institutionId,
-            institution: {
-              permanentId: newComplaint.institutionId,
-              name: newComplaint.institutionName,
-              state: newComplaint.state,
-              district: newComplaint.region,
-            },
-            subject: newComplaint.title,
-            description: newComplaint.description,
-            category: newComplaint.category,
-            priority: newComplaint.priority,
-            complainantType: newComplaint.complainantType,
-            complainantMaskedId: input.complainantMaskedId,
-            createdAt: newComplaint.filingDate,
-          };
-
-          const poolInputs: ComplaintInput[] = complaints.map((c) => ({
-            id: c.id,
-            complaintNumber: c.id,
-            originalBureauRef: c.id,
-            bureauId: c.bureau,
-            institutionId: c.institutionId,
-            institution: {
-              permanentId: c.institutionId,
-              name: c.institutionName,
-              state: c.state,
-              district: c.region,
-            },
-            subject: c.title,
-            description: c.description,
-            category: c.category,
-            priority: c.priority,
-            complainantType: c.complainantType,
-            createdAt: c.filingDate,
-          }));
-
-          // Run the real pure algorithm without fabricating scores
-          const detected = scanForOverlapCandidates(targetInput, poolInputs, 0.35);
-
-          const generatedOverlaps: OverlapCandidate[] = detected.map((cand) => ({
-            id: `OVL-${cand.primaryComplaintId}-${cand.candidateComplaintId}`,
-            sourceComplaintId: cand.primaryComplaintId,
-            targetComplaintId: cand.candidateComplaintId,
-            signalScore: Math.round(cand.overallScore * 100),
-            matchingSignals: [
-              {
-                type: 'Text Similarity',
-                detail: cand.matchingSignals.explanation,
-              },
-              ...(cand.matchingSignals.commonKeywords &&
-              cand.matchingSignals.commonKeywords.length > 0
-                ? [
-                    {
-                      type: 'Identical Faculty Named' as const,
-                      detail: `Matching keywords: ${cand.matchingSignals.commonKeywords.join(', ')}`,
-                    },
-                  ]
-                : []),
-              ...(cand.matchingSignals.daysApart !== undefined &&
-              cand.matchingSignals.daysApart !== null
-                ? [
-                    {
-                      type: 'Temporal Proximity' as const,
-                      detail: `Filing gap: ${cand.matchingSignals.daysApart} days`,
-                    },
-                  ]
-                : []),
-            ],
-            reviewStatus: 'Pending',
-          }));
-
-          // Update local state
-          setComplaints((prev) => [newComplaint, ...prev]);
-          if (generatedOverlaps.length > 0) {
-            setOverlaps((prev) => [...generatedOverlaps, ...prev]);
-          }
-
-          const newAudit: AuditEvent = {
-            id: `AUD-${Date.now()}`,
-            complaintId: newId,
-            actor: currentOfficer?.name || 'Scrutiny Session',
-            action: 'Submitted Institutional Grievance (Local Baseline)',
-            details: `Registered ${newId} (${newComplaint.bureau}) with ${generatedOverlaps.length} advisory overlap candidates flagged`,
-            timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-          };
-          setAuditLogs((prev) => [newAudit, ...prev]);
-
-          return {
-            success: true,
-            complaint: newComplaint,
-            overlaps: generatedOverlaps,
-            mode: 'local-demo',
-            evaluatedPoolSize: complaints.length,
-            detectedCandidateCount: generatedOverlaps.length,
-            rawSignals: detected,
-          };
+        // Add to local state only upon confirmed database persistence
+        setComplaints((prev) => {
+          const exists = prev.some((c) => c.id === res.complaint.id);
+          return exists ? prev : [res.complaint, ...prev];
+        });
+        if (res.overlaps.length > 0) {
+          setOverlaps((prev) => [...res.overlaps, ...prev]);
         }
+
+        const newAudit: AuditEvent = {
+          id: `AUD-${Date.now()}`,
+          complaintId: res.complaint.id,
+          actor: currentOfficer?.name || 'Authorized Portal Submitter',
+          action: 'Ingested Grievance via Portal',
+          details: `Registered ${res.complaint.id} (${res.complaint.bureau}) with ${res.overlaps.length} cross-bureau overlap candidates flagged`,
+          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        };
+        setAuditLogs((prev) => [newAudit, ...prev]);
+
+        return {
+          success: true,
+          complaint: res.complaint,
+          overlaps: res.overlaps,
+          mode: 'live-backend',
+          evaluatedPoolSize: res.rawResult.evaluatedPoolSize,
+          detectedCandidateCount: res.rawResult.detectedCandidateCount,
+        };
       } catch (err: unknown) {
         if (err instanceof ApiError) {
           setActionError({
@@ -631,7 +557,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsSubmitting(false);
       }
     },
-    [backendStatus, complaints, currentOfficer]
+    [currentOfficer]
   );
 
   const value = useMemo(
@@ -658,6 +584,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       clearActionError,
       refreshData,
       updateComplaintStatus,
+      deleteComplaint,
       adjudicateOverlap,
       submitComplaint,
       getComplaint,
@@ -687,6 +614,7 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       clearActionError,
       refreshData,
       updateComplaintStatus,
+      deleteComplaint,
       adjudicateOverlap,
       submitComplaint,
       getComplaint,

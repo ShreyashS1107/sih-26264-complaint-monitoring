@@ -48,13 +48,14 @@ function OverlapCompareContent() {
   }, [overlaps, sourceId, targetId]);
 
   // Adjudication form state
-  const [selectedVerdict, setSelectedVerdict] = useState<OverlapReviewStatus>(
+  const [selectedVerdict, setSelectedVerdict] = useState<OverlapReviewStatus | "Pass">(
     candidate ? candidate.reviewStatus : "Pending"
   );
   const [officerName, setOfficerName] = useState("Dr. S. K. Rao (Apex Scrutiny Officer)");
   const [rationaleNote, setRationaleNote] = useState(
     candidate?.adjudicationNote || ""
   );
+  const [institutionalDirective, setInstitutionalDirective] = useState("");
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -161,14 +162,20 @@ function OverlapCompareContent() {
     if (selectedVerdict === "Pending") {
       setFeedback({
         type: "error",
-        message: "Please select an explicit administrative determination (Linked, Independent, or Dismissed).",
+        message: "Please select an explicit administrative determination (Linked, Independent, Pass, or Dismissed).",
       });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const success = await adjudicateOverlap(candidate.id, selectedVerdict, rationaleNote.trim(), officerName.trim());
+      const success = await adjudicateOverlap(
+        candidate.id,
+        selectedVerdict,
+        rationaleNote.trim(),
+        officerName.trim(),
+        institutionalDirective.trim() || undefined
+      );
       if (success) {
         setFeedback({
           type: "success",
@@ -533,12 +540,12 @@ function OverlapCompareContent() {
         )}
 
         <form onSubmit={handleAdjudicationSubmit} className="mt-5 space-y-4">
-          {/* Verdict Selector (3 Explicit Options) */}
+          {/* Verdict Selector (4 Explicit Options) */}
           <div>
             <label className="block text-xs font-bold text-[var(--text-primary)] mb-2 uppercase tracking-wider font-mono">
               Select Administrative Verdict:
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Option 1: Link Complaints */}
               <label
                 className={`relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -548,7 +555,7 @@ function OverlapCompareContent() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-xs text-[var(--text-primary)]">Link as Related Cases</span>
+                  <span className="font-bold text-xs text-[var(--text-primary)]">Link as Related</span>
                   <input
                     type="radio"
                     name="verdict"
@@ -559,7 +566,7 @@ function OverlapCompareContent() {
                   />
                 </div>
                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                  Both complaints represent correlated grievances. Maintain both original dossiers while linking them for joint committee hearing.
+                  Both complaints represent correlated grievances. Link for joint committee hearing.
                 </p>
               </label>
 
@@ -572,7 +579,7 @@ function OverlapCompareContent() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-xs text-[var(--text-primary)]">Mark as Independent</span>
+                  <span className="font-bold text-xs text-[var(--text-primary)]">Independent</span>
                   <input
                     type="radio"
                     name="verdict"
@@ -583,11 +590,35 @@ function OverlapCompareContent() {
                   />
                 </div>
                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                  Confirmed distinct grievances. Algorithmic overlap is coincidental or non-actionable; complaints remain on separate procedural paths.
+                  Distinct grievances. Proceed on separate procedural paths without joint action.
                 </p>
               </label>
 
-              {/* Option 3: Dismiss Overlap */}
+              {/* Option 3: Pass (Clear Without Link) */}
+              <label
+                className={`relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  selectedVerdict === "Pass"
+                    ? "border-blue-500 bg-blue-500/10 shadow-xs"
+                    : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] hover:border-blue-500/50"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-xs text-[var(--text-primary)]">Pass</span>
+                  <input
+                    type="radio"
+                    name="verdict"
+                    value="Pass"
+                    checked={selectedVerdict === "Pass"}
+                    onChange={() => setSelectedVerdict("Pass")}
+                    className="text-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  Scrutinized and passed. Clear candidate match without administrative linkage.
+                </p>
+              </label>
+
+              {/* Option 4: Dismiss Overlap */}
               <label
                 className={`relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   selectedVerdict === "Dismissed"
@@ -596,7 +627,7 @@ function OverlapCompareContent() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-xs text-[var(--text-primary)]">Dismiss Overlap Candidate</span>
+                  <span className="font-bold text-xs text-[var(--text-primary)]">Dismiss</span>
                   <input
                     type="radio"
                     name="verdict"
@@ -607,7 +638,7 @@ function OverlapCompareContent() {
                   />
                 </div>
                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                  Spurious match signal. Dismiss candidate pair completely from active triage queue.
+                  Spurious match signal. Dismiss candidate pair completely from active queue.
                 </p>
               </label>
             </div>
@@ -632,7 +663,7 @@ function OverlapCompareContent() {
           {/* Mandatory Rationale Note */}
           <div>
             <label htmlFor="rationale-input" className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
-              Mandatory Scrutiny Rationale &amp; Institutional Directive *
+              Mandatory Scrutiny Rationale *
             </label>
             <textarea
               id="rationale-input"
@@ -642,6 +673,21 @@ function OverlapCompareContent() {
               placeholder="Record explicit administrative justification for this finding (e.g. 'Both complaints target identical fee demands during admission; linked for joint inquiry under Approval Bureau')..."
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs font-medium"
               required
+            />
+          </div>
+
+          {/* Institutional Directive */}
+          <div>
+            <label htmlFor="directive-input" className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+              Institutional Directive / Statutory Order (Optional)
+            </label>
+            <input
+              id="directive-input"
+              type="text"
+              value={institutionalDirective}
+              onChange={(e) => setInstitutionalDirective(e.target.value)}
+              placeholder="Record any formal directive or procedural order issued to the institution or bureau..."
+              className="h-10 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs font-medium"
             />
           </div>
 

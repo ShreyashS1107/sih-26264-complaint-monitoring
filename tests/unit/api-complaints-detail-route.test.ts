@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GET, PATCH } from '@/app/api/v1/complaints/[id]/route';
+import { GET, PATCH, DELETE } from '@/app/api/v1/complaints/[id]/route';
 import { db } from '@/server/db';
 import * as authModule from '@/lib/auth';
 import * as auditModule from '@/modules/audit/service';
@@ -132,7 +132,7 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
         category: 'FEE_ANOMALY',
       };
 
-      vi.spyOn(db.complaint, 'findUnique').mockResolvedValue(existingComplaint as any);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(existingComplaint as any);
 
       const mockUpdated = {
         ...existingComplaint,
@@ -214,7 +214,7 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
 
     it('should return 404 when target complaint is not found', async () => {
       vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
-      vi.spyOn(db.complaint, 'findUnique').mockResolvedValue(null);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(null);
 
       const request = new Request('http://localhost:3000/api/v1/complaints/missing_id', {
         method: 'PATCH',
@@ -242,7 +242,7 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
         role: 'CASE_OFFICER',
       };
       vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(foreignOfficer);
-      vi.spyOn(db.complaint, 'findUnique').mockResolvedValue(sampleComplaint as any);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
 
       const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
         method: 'PATCH',
@@ -267,7 +267,7 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
 
     it('should reject invalid status transitions (e.g., SUBMITTED -> RESOLVED directly)', async () => {
       vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
-      vi.spyOn(db.complaint, 'findUnique').mockResolvedValue({
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue({
         ...sampleComplaint,
         status: 'SUBMITTED',
       } as any);
@@ -293,9 +293,57 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
       );
     });
 
+    it('should successfully update complaint status by complaintNumber AICTE-2026-8404', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      const targetComplaint = {
+        ...sampleComplaint,
+        id: 'cuid_aicte_8404',
+        complaintNumber: 'AICTE-2026-8404',
+        status: 'SUBMITTED',
+      };
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(targetComplaint as any);
+
+      const mockUpdated = {
+        ...targetComplaint,
+        status: 'UNDER_PRELIMINARY_REVIEW',
+      };
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (callback: any) => {
+        return callback({
+          complaint: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+          },
+          caseAction: {
+            create: vi.fn().mockResolvedValue({ id: 'act_002', complaintId: targetComplaint.id }),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_002' }),
+          },
+        });
+      });
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/AICTE-2026-8404', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'UNDER_PRELIMINARY_REVIEW',
+          notes: 'Verified valid procedural transition by complaint number identifier',
+        }),
+      });
+
+      const response = await PATCH(request, {
+        params: Promise.resolve({ id: 'AICTE-2026-8404' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.complaint.status).toBe('UNDER_PRELIMINARY_REVIEW');
+    });
+
     it('should successfully update complaint status, create timeline action, and log audit trail when authenticated', async () => {
       vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
-      vi.spyOn(db.complaint, 'findUnique').mockResolvedValue({
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue({
         ...sampleComplaint,
         status: 'SUBMITTED',
       } as any);
@@ -336,6 +384,140 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
       expect(response.status).toBe(200);
       expect(body.success).toBe(true);
       expect(body.data.complaint.status).toBe('UNDER_PRELIMINARY_REVIEW');
+    });
+  });
+
+  describe('DELETE /api/v1/complaints/[id]', () => {
+    it('should return 400 for empty or invalid complaint ID', async () => {
+      const request = new Request('http://localhost:3000/api/v1/complaints//', {
+        method: 'DELETE',
+      });
+      const response = await DELETE(request, { params: Promise.resolve({ id: '   ' }) });
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.error.code).toBe('INVALID_COMPLAINT_ID');
+    });
+
+    it('should return 401 when unauthenticated and prototype mode is authenticated', async () => {
+      const origEnv = process.env.PROTOTYPE_ACCESS_MODE;
+      process.env.PROTOTYPE_ACCESS_MODE = 'authenticated';
+      try {
+        const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
+          method: 'DELETE',
+        });
+        const response = await DELETE(request, {
+          params: Promise.resolve({ id: 'cmp_test_001' }),
+        });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.error.code).toBe('UNAUTHORIZED');
+      } finally {
+        process.env.PROTOTYPE_ACCESS_MODE = origEnv;
+      }
+    });
+
+    it('should return 404 when complaint does not exist', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(null);
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/missing_cmp', {
+        method: 'DELETE',
+      });
+      const response = await DELETE(request, {
+        params: Promise.resolve({ id: 'missing_cmp' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(body.error.code).toBe('COMPLAINT_NOT_FOUND');
+    });
+
+    it('should return 403 when officer from another bureau attempts deletion', async () => {
+      const foreignOfficer: authModule.AuthenticatedOfficer = {
+        ...mockOfficer,
+        id: 'officer-foreign-999',
+        bureauId: 'bureau-foreign-999',
+        role: 'CASE_OFFICER',
+      };
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(foreignOfficer);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
+        method: 'DELETE',
+      });
+      const response = await DELETE(request, {
+        params: Promise.resolve({ id: 'cmp_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('should soft-delete / archive to DISMISSED when dependent records exist to preserve audit history', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
+      vi.spyOn(db.caseAction, 'count').mockResolvedValue(2);
+      vi.spyOn(db.overlapCandidate, 'count').mockResolvedValue(1);
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (cb: any) => {
+        return cb({
+          complaint: {
+            update: vi.fn().mockResolvedValue({ ...sampleComplaint, status: 'DISMISSED' }),
+          },
+          caseAction: {
+            create: vi.fn().mockResolvedValue({ id: 'act_arch' }),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_archive_01' }),
+          },
+        });
+      });
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
+        method: 'DELETE',
+      });
+      const response = await DELETE(request, {
+        params: Promise.resolve({ id: 'cmp_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.action).toBe('ARCHIVED');
+      expect(body.data.message).toContain('safely soft-deleted/archived');
+    });
+
+    it('should permanently delete complaint when no dependent records exist', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.complaint, 'findFirst').mockResolvedValue(sampleComplaint as any);
+      vi.spyOn(db.caseAction, 'count').mockResolvedValue(0);
+      vi.spyOn(db.overlapCandidate, 'count').mockResolvedValue(0);
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (cb: any) => {
+        return cb({
+          complaint: {
+            delete: vi.fn().mockResolvedValue(sampleComplaint),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_del_01' }),
+          },
+        });
+      });
+
+      const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
+        method: 'DELETE',
+      });
+      const response = await DELETE(request, {
+        params: Promise.resolve({ id: 'cmp_test_001' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.action).toBe('DELETED');
     });
   });
 });

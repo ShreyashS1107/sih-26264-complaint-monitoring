@@ -258,13 +258,15 @@ function mapBackendOverlapStatus(status: string): OverlapReviewStatus {
 }
 
 function mapFrontendOverlapDecisionToBackend(
-  decision: OverlapReviewStatus
+  decision: OverlapReviewStatus | string
 ): 'FLAGGED_JOINT_REVIEW' | 'CONFIRMED_OVERLAP' | 'DISMISSED_INDEPENDENT' {
   switch (decision) {
     case 'Linked':
       return 'CONFIRMED_OVERLAP';
     case 'Independent':
     case 'Dismissed':
+    case 'Pass':
+    case 'PASS' as any:
       return 'DISMISSED_INDEPENDENT';
     case 'Pending':
     default:
@@ -640,6 +642,20 @@ export const apiClient = {
   },
 
   /**
+   * Delete or archive a complaint
+   */
+  async deleteComplaint(
+    id: string
+  ): Promise<{ success: boolean; action: 'DELETED' | 'ARCHIVED'; message: string }> {
+    return fetchApi<{ success: boolean; action: 'DELETED' | 'ARCHIVED'; message: string }>(
+      `/api/v1/complaints/${encodeURIComponent(id)}`,
+      {
+        method: 'DELETE',
+      }
+    );
+  },
+
+  /**
    * Fetch overlap candidates from algorithm pipeline
    */
   async getOverlapCandidates(query?: {
@@ -699,13 +715,22 @@ export const apiClient = {
   /**
    * Submit human review decision for an overlap candidate
    */
-  async reviewOverlap(id: string, decision: OverlapReviewStatus, note: string): Promise<void> {
-    const backendDecision = mapFrontendOverlapDecisionToBackend(decision);
+  async reviewOverlap(
+    id: string,
+    decision: OverlapReviewStatus | string,
+    note: string,
+    directive?: string
+  ): Promise<void> {
+    const backendDecision = mapFrontendOverlapDecisionToBackend(decision as OverlapReviewStatus);
     await fetchApi(`/api/v1/overlap-candidates/${encodeURIComponent(id)}/review`, {
       method: 'POST',
       body: JSON.stringify({
         decision: backendDecision,
+        verdict: decision,
         notes: note.trim().length >= 5 ? note.trim() : `${note.trim()} (adjudication rationale)`,
+        rationale: note.trim(),
+        directive: directive?.trim() || undefined,
+        institutionalDirective: directive?.trim() || undefined,
       }),
     });
   },

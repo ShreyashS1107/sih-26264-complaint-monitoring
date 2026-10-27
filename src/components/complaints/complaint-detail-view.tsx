@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { useComplaints } from "../../lib/context/complaint-context";
 import {
@@ -15,6 +16,8 @@ import {
   IconChevronRight,
   IconArrowRight,
   IconCheckCircle,
+  IconTrash,
+  IconX,
 } from "../ui/icons";
 import { StatusBadge, PriorityBadge, OverlapStatusBadge, Badge } from "../ui/badge";
 import { ComplaintStatus } from "../../lib/types";
@@ -35,7 +38,14 @@ const ALL_STATUSES: ComplaintStatus[] = [
 ];
 
 export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) => {
-  const { complaints, updateComplaintStatus, getOverlapsForComplaint, auditLogs } = useComplaints();
+  const router = useRouter();
+  const {
+    complaints,
+    updateComplaintStatus,
+    deleteComplaint,
+    getOverlapsForComplaint,
+    auditLogs,
+  } = useComplaints();
 
   // Find complaint in live state
   const complaint = useMemo(() => {
@@ -62,6 +72,12 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
     message: string;
   } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Deletion state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
   // If complaint is not found in the dataset
   if (!complaint) {
@@ -98,13 +114,14 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
     }
 
     setIsUpdating(true);
+    setUpdateFeedback(null);
     try {
-      const success = await updateComplaintStatus(
+      const result = await updateComplaintStatus(
         complaint.id,
         targetStatus,
         statusNote.trim() || `Administrative status transition to ${targetStatus}`
       );
-      if (success) {
+      if (result.success) {
         setUpdateFeedback({
           type: "success",
           message: `Status successfully updated to "${targetStatus}".`,
@@ -113,16 +130,40 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
       } else {
         setUpdateFeedback({
           type: "error",
-          message: "Operation rejected by server: authorization required or invalid transition.",
+          message: result.error || "Operation rejected by server: authorization required or invalid transition.",
         });
       }
-    } catch {
+    } catch (err: unknown) {
       setUpdateFeedback({
         type: "error",
-        message: "Failed to update complaint status.",
+        message: err instanceof Error ? err.message : "Failed to update complaint status.",
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleExecuteDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await deleteComplaint(complaint.id);
+      if (res.success) {
+        setDeleteSuccess(
+          res.action === "ARCHIVED"
+            ? "Complaint has dependent records; safely archived as DISMISSED to preserve audit integrity. Redirecting..."
+            : "Complaint record permanently removed from registry. Redirecting..."
+        );
+        setTimeout(() => {
+          router.push("/complaints");
+        }, 1200);
+      } else {
+        setDeleteError(res.error || "Failed to delete complaint.");
+      }
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : "An unexpected server error occurred.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -143,8 +184,8 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
           <span>Back to Complaint Registry</span>
         </Link>
         <div className="flex items-center gap-2">
-          <Badge variant="warning" size="sm" className="font-mono">
-            Demo Active
+          <Badge variant="neutral" size="sm" className="font-mono">
+            Active Dossier
           </Badge>
           <span className="text-xs font-mono font-bold text-[var(--text-secondary)]">AICTE Apex Scrutiny</span>
         </div>
@@ -442,6 +483,21 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
                 <span>{isUpdating ? "Applying..." : "Apply Status Transition"}</span>
                 <IconArrowRight size={13} />
               </button>
+
+              <div className="pt-2.5 border-t border-[var(--border-subtle)] mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteError(null);
+                    setDeleteSuccess(null);
+                    setShowDeleteModal(true);
+                  }}
+                  className="w-full h-8.5 inline-flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs font-bold text-rose-500 hover:bg-rose-500/20 hover:border-rose-500/50 transition-colors shadow-2xs"
+                >
+                  <IconTrash size={13} />
+                  <span>Delete / Archive Dossier</span>
+                </button>
+              </div>
             </form>
           </div>
 
@@ -512,6 +568,85 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
           </div>
         </motion.div>
       </div>
+
+      {/* 4. Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div className="relative w-full max-w-md rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500">
+                  <IconTrash size={20} />
+                </div>
+                <div>
+                  <h2 id="delete-confirm-title" className="text-base font-bold text-[var(--text-primary)]">
+                    Confirm Dossier Deletion
+                  </h2>
+                  <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                    {complaint.id}
+                  </span>
+                </div>
+              </div>
+              {!isDeleting && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+                >
+                  <IconX size={18} />
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              Are you sure you want to delete or archive complaint <strong className="text-[var(--text-primary)]">{complaint.id}</strong>?
+            </p>
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-[11px] text-amber-600 dark:text-amber-400 leading-normal">
+              <strong>Referential Integrity Protection:</strong>
+              <p className="mt-1">
+                If this complaint has procedural case actions or overlap records, it will be safely soft-deleted/archived as DISMISSED to preserve statutory audit trails. Otherwise, it will be cleanly removed.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="p-2.5 rounded-lg text-xs bg-rose-500/10 border border-rose-500/30 text-rose-500 font-medium">
+                {deleteError}
+              </div>
+            )}
+
+            {deleteSuccess && (
+              <div className="p-2.5 rounded-lg text-xs bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 font-medium">
+                {deleteSuccess}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
+              <button
+                type="button"
+                disabled={isDeleting || !!deleteSuccess}
+                onClick={() => setShowDeleteModal(false)}
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-surface-subtle)] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting || !!deleteSuccess}
+                onClick={handleExecuteDelete}
+                className="rounded-lg px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <IconTrash size={13} />
+                <span>{isDeleting ? "Processing..." : "Confirm Deletion"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
