@@ -13,6 +13,8 @@ import {
   IconAlertTriangle,
   IconChevronRight,
   IconUser,
+  IconMenu,
+  IconX,
 } from '../ui/icons';
 import { StatusBadge, Badge } from '../ui/badge';
 import { AnimatedNumber } from '../motion/animated-number';
@@ -24,6 +26,7 @@ export const EmployeeHomepage: React.FC = () => {
   const { complaints, pendingOverlapCount, backendStatus, currentOfficer } = useComplaints();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Handle direct lookup search
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -53,97 +56,195 @@ export const EmployeeHomepage: React.FC = () => {
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] selection:bg-[var(--primary-accent)]/30 selection:text-white transition-colors duration-200">
       {/* 1. Official AICTE Top Navigation Bar */}
       <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 backdrop-blur-md transition-colors duration-200">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Council Emblem & Title */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-accent)] text-white shadow-[0_2px_12px_var(--primary-accent-glow)] group-hover:scale-105 transition-all">
-              <IconShield size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm sm:text-base tracking-tight text-[var(--text-primary)] uppercase leading-none">
-                  AICTE Intelligence
+        <div className="mx-auto flex h-16 w-full items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
+          {/* Left: Mobile Menu Toggle + Council Emblem & Title */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Mobile/Tablet Menu Button (< lg) */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--primary-accent)] transition-colors shrink-0"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <IconX size={18} /> : <IconMenu size={18} />}
+            </button>
+
+            {/* Emblem & Branding Link */}
+            <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-accent)] text-white shadow-[0_2px_12px_var(--primary-accent-glow)] group-hover:scale-105 transition-all">
+                <IconShield size={20} />
+              </div>
+              <div className="flex flex-col justify-center">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-extrabold text-xs sm:text-sm lg:text-base tracking-tight text-[var(--text-primary)] uppercase leading-none whitespace-nowrap">
+                    AICTE Intelligence
+                  </span>
+                  <span className="rounded bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-1.5 py-0.5 text-[9px] font-mono font-bold text-[var(--primary-accent)] whitespace-nowrap">
+                    APEX PORTAL
+                  </span>
+                </div>
+                <span className="hidden 2xl:block text-[11px] font-medium text-[var(--text-secondary)] mt-0.5 whitespace-nowrap">
+                  Institutional Document Verification &amp; Grievance System
                 </span>
-                <span className="rounded bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-1.5 py-0.2 text-[9px] font-mono font-bold text-[var(--primary-accent)]">
-                  APEX PORTAL
+                <span className="hidden xl:block 2xl:hidden text-[10px] font-medium text-[var(--text-secondary)] mt-0.5 whitespace-nowrap">
+                  Grievance &amp; Verification System
                 </span>
               </div>
-              <span className="block text-[11px] font-medium text-[var(--text-secondary)] mt-0.5">
-                Institutional Document Verification &amp; Grievance System
-              </span>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
-          {/* Desktop Links */}
-          <nav className="hidden md:flex items-center gap-1 text-xs font-semibold text-[var(--text-secondary)]">
+          {/* Center: Desktop Navigation Links (>= lg: 1024px) */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 text-xs font-semibold text-[var(--text-secondary)] shrink-0">
             <Link
               href="/"
-              className="px-3 py-1.5 rounded-lg text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] font-bold transition-colors"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] font-bold transition-colors whitespace-nowrap shrink-0 text-[11px] xl:text-xs"
             >
               Overview
             </Link>
             <Link
               href="/complaints"
-              className="px-3 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors whitespace-nowrap shrink-0 text-[11px] xl:text-xs"
             >
               Review Records
             </Link>
             <Link
               href="/submit-complaint"
-              className="px-3 py-1.5 rounded-lg text-[var(--primary-accent)] hover:bg-[var(--primary-accent-subtle)] transition-colors font-bold"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg text-[var(--primary-accent)] hover:bg-[var(--primary-accent-subtle)] transition-colors font-bold whitespace-nowrap shrink-0 text-[11px] xl:text-xs"
             >
               Submit Complaint
             </Link>
             <Link
               href="/overlap-review"
-              className="px-3 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors flex items-center gap-1.5"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 text-[11px] xl:text-xs"
             >
               <span>Overlap Triage</span>
               {pendingOverlapCount > 0 && (
-                <span className="rounded-full bg-amber-500/20 text-amber-400 px-2 py-0.2 text-[10px] font-bold border border-amber-500/30">
+                <span className="rounded-full bg-amber-500/20 text-amber-400 px-1.5 py-0.2 text-[9px] xl:text-[10px] font-bold border border-amber-500/30">
                   {pendingOverlapCount}
                 </span>
               )}
             </Link>
             <Link
               href="/analytics"
-              className="px-3 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors whitespace-nowrap shrink-0 text-[11px] xl:text-xs"
             >
               Analytics
             </Link>
             <Link
               href="/how-it-works"
-              className="px-3 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors font-mono text-[11px]"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors font-mono text-[10px] xl:text-[11px] whitespace-nowrap shrink-0"
               title="Inspect system architecture & math formulas"
             >
               How It Works
             </Link>
           </nav>
 
-          {/* Prototype Access / Scrutiny Status */}
-          <div className="flex items-center gap-3">
-            <ThemeCustomizer />
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] transition-colors shadow-2xs"
+          {/* Right: Action Controls (Theme Customizer, Demo Login, User Profile) */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
+            {/* Theme & Palette Controls */}
+            <div className="flex items-center shrink-0">
+              <ThemeCustomizer />
+            </div>
+
+            {/* Demo Login Button */}
+            <div className="flex items-center shrink-0">
+              <Link
+                href="/login"
+                className="hidden sm:inline-flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] hover:bg-[var(--bg-surface-subtle)] transition-colors shadow-2xs whitespace-nowrap shrink-0"
+              >
+                Demo Login
+              </Link>
+            </div>
+
+            {/* Visual Separator */}
+            <div className="h-5 w-px bg-[var(--border-subtle)] shrink-0 hidden sm:block" aria-hidden="true" />
+
+            {/* User Profile / Access Badge */}
+            <div
+              className="flex items-center gap-2 shrink-0 cursor-default"
+              title={
+                currentOfficer
+                  ? `${currentOfficer.name} (${currentOfficer.badgeNumber})`
+                  : 'Apex Scrutiny Reviewer (Open Prototype Access)'
+              }
             >
-              Demo Login
-            </Link>
-            <div className="flex items-center gap-2 pl-3 border-l border-[var(--border-subtle)]">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-accent-subtle)] text-[var(--primary-accent)] font-bold text-xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary-accent-subtle)] text-[var(--primary-accent)] font-bold text-xs border border-[var(--primary-accent)]/20 shadow-2xs">
                 <IconUser size={16} />
               </div>
-              <div className="hidden sm:block text-left text-xs">
-                <span className="block font-bold text-[var(--text-primary)] leading-none">
+              <div className="hidden 2xl:block text-left text-xs whitespace-nowrap">
+                <span className="block font-bold text-[var(--text-primary)] leading-none truncate max-w-[140px]">
                   {currentOfficer ? currentOfficer.name : 'Apex Scrutiny Reviewer'}
                 </span>
-                <span className="block text-[10px] text-emerald-500 font-semibold leading-none mt-1">
+                <span className="block text-[10px] text-emerald-500 font-semibold leading-none mt-1 truncate max-w-[140px]">
                   {currentOfficer ? currentOfficer.badgeNumber : 'Open Prototype Access'}
                 </span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Mobile & Tablet Navigation Menu Dropdown (< lg: 1024px) */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3 space-y-1 shadow-lg animate-in slide-in-from-top-2 duration-150">
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] transition-colors"
+            >
+              <span>Overview</span>
+            </Link>
+            <Link
+              href="/complaints"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+            >
+              <span>Review Records</span>
+            </Link>
+            <Link
+              href="/submit-complaint"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-[var(--primary-accent)] hover:bg-[var(--primary-accent-subtle)] transition-colors"
+            >
+              <span>Submit Complaint</span>
+            </Link>
+            <Link
+              href="/overlap-review"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+            >
+              <span>Overlap Triage</span>
+              {pendingOverlapCount > 0 && (
+                <span className="rounded-full bg-amber-500/20 text-amber-400 px-2 py-0.5 text-[10px] font-bold border border-amber-500/30">
+                  {pendingOverlapCount}
+                </span>
+              )}
+            </Link>
+            <Link
+              href="/analytics"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+            >
+              <span>Analytics</span>
+            </Link>
+            <Link
+              href="/how-it-works"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors"
+            >
+              <span>How It Works</span>
+            </Link>
+            <div className="pt-2 sm:hidden border-t border-[var(--border-subtle)]">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center w-full py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] transition-colors"
+              >
+                Demo Login
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Container */}

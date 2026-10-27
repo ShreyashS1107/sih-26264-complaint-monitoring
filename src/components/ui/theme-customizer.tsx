@@ -40,7 +40,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
         <div className="h-8.5 w-8.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] shrink-0" />
         <div
           className={`h-8.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] shrink-0 ${
-            compact ? 'w-8.5' : 'w-8.5 md:w-32'
+            compact ? 'w-8.5' : 'w-8.5 2xl:w-36'
           }`}
         />
       </div>
@@ -74,7 +74,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
         </motion.div>
       </button>
 
-      {/* 2. Accent Color Palette Trigger (Fixed Width to prevent layout shifts) */}
+      {/* 2. Accent Color Palette Trigger (Fixed Width to prevent layout shifts & clipping) */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -82,7 +82,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
         aria-label="Customize accent color theme"
         title={`Active accent: ${activeConfig.name}. Click to change theme accent.`}
         className={`group relative flex h-8.5 shrink-0 items-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] shadow-2xs transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)] ${
-          compact ? 'w-8.5 justify-center px-0' : 'w-8.5 md:w-32 justify-between px-2.5'
+          compact ? 'w-8.5 justify-center px-0' : 'w-8.5 2xl:w-36 justify-center 2xl:justify-between px-0 2xl:px-2.5'
         }`}
       >
         <div className="flex items-center gap-1.5 min-w-0">
@@ -91,7 +91,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
             style={{ backgroundColor: activeConfig.primary }}
           />
           {!compact && (
-            <span className="hidden md:inline-block truncate text-[11px] font-mono tracking-tight text-[var(--text-secondary)]">
+            <span className="hidden 2xl:inline-block truncate text-[11px] font-sans font-medium tracking-tight text-[var(--text-secondary)]">
               {activeConfig.name}
             </span>
           )}
@@ -99,7 +99,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
         <IconPalette
           size={14}
           className={`${
-            compact ? 'hidden' : 'hidden md:block'
+            compact ? 'hidden' : 'hidden 2xl:block'
           } shrink-0 text-[var(--text-secondary)] group-hover:text-[var(--primary-accent)] transition-colors`}
         />
       </button>
