@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "../lib/context/theme-context";
 import { ComplaintProvider } from "../lib/context/complaint-context";
 import { AppShell } from "../components/shell/app-shell";
 
@@ -19,6 +20,28 @@ export const metadata: Metadata = {
   description: "AICTE Apex Institutional Complaint Monitoring, Overlap Triage & Tracking System",
 };
 
+const themeInitScript = `
+  (function() {
+    try {
+      var mode = localStorage.getItem('sih26264_theme_mode') || 'dark';
+      var accent = localStorage.getItem('sih26264_theme_accent') || 'blue';
+      var customColor = localStorage.getItem('sih26264_theme_custom_color');
+      document.documentElement.setAttribute('data-theme', mode);
+      if (mode === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      }
+      document.documentElement.setAttribute('data-accent', accent);
+      if (accent === 'custom' && customColor) {
+        document.documentElement.style.setProperty('--primary-accent', customColor);
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -27,12 +50,18 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F6F7F9]">
-        <ComplaintProvider>
-          <AppShell>{children}</AppShell>
-        </ComplaintProvider>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+        <ThemeProvider>
+          <ComplaintProvider>
+            <AppShell>{children}</AppShell>
+          </ComplaintProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

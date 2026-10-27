@@ -127,14 +127,14 @@ export const OperationalDashboard: React.FC = () => {
       <motion.div variants={fadeInUpVariants} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold tracking-tight text-[#172033]">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
               Institutional Oversight &amp; Grievance Overview
             </h2>
-            <Badge variant="warning" size="sm">
-              Demonstration Mode
+            <Badge variant="neutral" size="sm">
+              Live Scrutiny Console
             </Badge>
           </div>
-          <p className="mt-0.5 text-xs text-[#697386]">
+          <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
             AICTE Central Vigilance &amp; Redressal Dashboard &bull; Monitored Academic Cycle 2026&ndash;27
           </p>
         </div>
@@ -142,14 +142,14 @@ export const OperationalDashboard: React.FC = () => {
         <div className="flex items-center gap-2">
           <Link
             href="/complaints"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-semibold text-[#172033] hover:bg-slate-50 shadow-2xs transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)]/40 hover:text-[var(--primary-accent)] shadow-2xs transition-colors"
           >
             <span>Complaint Registry</span>
-            <IconArrowRight size={13} className="text-[#697386]" />
+            <IconArrowRight size={13} className="text-[var(--text-muted)]" />
           </Link>
           <Link
             href="/overlap-review"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#315EFB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#254EDB] shadow-2xs transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--primary-accent-hover)] shadow-[0_0_15px_var(--primary-accent-glow)] transition-all"
           >
             <span>Triage Overlaps</span>
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-bold">
@@ -164,23 +164,23 @@ export const OperationalDashboard: React.FC = () => {
         {/* Metric 1: Total Complaints */}
         <Link
           href="/complaints"
-          className="group block rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#315EFB]/50 hover:shadow-xs transition-all focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]"
+          className="group block rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-xs hover:border-[var(--primary-accent)]/50 hover:shadow-[0_0_15px_var(--primary-accent-glow)] transition-all focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#697386]">Total Intake Dossiers</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-[#172033] group-hover:bg-blue-50 group-hover:text-[#315EFB] transition-colors">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">Total Intake Dossiers</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] group-hover:bg-[var(--primary-accent-subtle)] group-hover:text-[var(--primary-accent)] transition-colors">
               <IconFileText size={16} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[#172033]">
+            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[var(--text-primary)]">
               <AnimatedNumber value={totalComplaints} />
             </span>
-            <span className="text-xs text-[#697386]">cases recorded</span>
+            <span className="text-xs text-[var(--text-secondary)]">cases recorded</span>
           </div>
-          <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-[#697386]">
+          <div className="mt-2.5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-[11px] text-[var(--text-secondary)]">
             <span>Across 5 AICTE Bureaus</span>
-            <span className="font-semibold text-[#315EFB] group-hover:translate-x-0.5 transition-transform inline-flex items-center">
+            <span className="font-semibold text-[var(--primary-accent)] group-hover:translate-x-0.5 transition-transform inline-flex items-center">
               View all &rarr;
             </span>
           </div>
@@ -189,46 +189,46 @@ export const OperationalDashboard: React.FC = () => {
         {/* Metric 2: Active / Unresolved */}
         <Link
           href="/complaints"
-          className="group block rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#315EFB]/50 hover:shadow-xs transition-all focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]"
+          className="group block rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-xs hover:border-[var(--primary-accent)]/50 hover:shadow-[0_0_15px_var(--primary-accent-glow)] transition-all focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#697386]">Active / Under Scrutiny</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#315EFB] transition-colors">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">Active / Under Scrutiny</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-accent-subtle)] text-[var(--primary-accent)] transition-colors">
               <IconClock size={16} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[#172033]">
+            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[var(--text-primary)]">
               <AnimatedNumber value={activeCount} />
             </span>
-            <span className="text-xs text-[#697386]">
+            <span className="text-xs text-[var(--text-secondary)]">
               ({totalComplaints > 0 ? Math.round((activeCount / totalComplaints) * 100) : 0}%)
             </span>
           </div>
-          <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-[#697386]">
+          <div className="mt-2.5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-[11px] text-[var(--text-secondary)]">
             <span>Awaiting resolution or hearing</span>
-            <span className="font-semibold text-[#315EFB] group-hover:translate-x-0.5 transition-transform inline-flex items-center">
+            <span className="font-semibold text-[var(--primary-accent)] group-hover:translate-x-0.5 transition-transform inline-flex items-center">
               Inspect &rarr;
             </span>
           </div>
         </Link>
 
         {/* Metric 3: Critical Priority Cases */}
-        <div className="rounded-xl border border-rose-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#C53B42]" />
+        <div className="rounded-xl border border-rose-500/30 bg-[var(--bg-surface)] p-5 shadow-xs relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#991B1B]">Critical Urgency Cases</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-[#C53B42]">
+            <span className="text-xs font-bold text-rose-500">Critical Urgency Cases</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
               <IconAlertTriangle size={16} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[#C53B42]">
+            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-rose-500">
               <AnimatedNumber value={criticalCount} />
             </span>
-            <span className="text-xs text-[#991B1B]">statutory SLA risk</span>
+            <span className="text-xs text-rose-400">statutory SLA risk</span>
           </div>
-          <div className="mt-2.5 flex items-center justify-between border-t border-rose-100 pt-2 text-[11px] text-[#991B1B]">
+          <div className="mt-2.5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-[11px] text-rose-400">
             <span>Ragging &amp; Capitation fee alerts</span>
             <span className="font-bold">Immediate action</span>
           </div>
@@ -237,24 +237,24 @@ export const OperationalDashboard: React.FC = () => {
         {/* Metric 4: Pending Overlap Reviews */}
         <Link
           href="/overlap-review"
-          className="group block rounded-xl border border-amber-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-amber-400 hover:shadow-xs transition-all focus:outline-hidden focus:ring-2 focus:ring-amber-500 relative overflow-hidden"
+          className="group block rounded-xl border border-amber-500/30 bg-[var(--bg-surface)] p-5 shadow-xs hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-all focus:outline-hidden focus:ring-2 focus:ring-amber-500 relative overflow-hidden"
         >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#B7791F]" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#92400E]">Pending Overlap Triage</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-[#B7791F]">
+            <span className="text-xs font-bold text-amber-500">Pending Overlap Triage</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
               <IconLayers size={16} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[#B7791F]">
+            <span className="text-2xl font-extrabold tracking-tight tabular-nums text-amber-500">
               <AnimatedNumber value={pendingOverlapCount} />
             </span>
-            <span className="text-xs text-[#92400E]">candidate pairs</span>
+            <span className="text-xs text-amber-400">candidate pairs</span>
           </div>
-          <div className="mt-2.5 flex items-center justify-between border-t border-amber-100 pt-2 text-[11px] text-[#92400E]">
+          <div className="mt-2.5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-[11px] text-amber-400">
             <span>Advisory signal match</span>
-            <span className="font-bold text-[#B7791F] group-hover:translate-x-0.5 transition-transform inline-flex items-center">
+            <span className="font-bold text-amber-500 group-hover:translate-x-0.5 transition-transform inline-flex items-center">
               Adjudicate &rarr;
             </span>
           </div>
@@ -264,18 +264,18 @@ export const OperationalDashboard: React.FC = () => {
       {/* Workload & Status Distribution Row */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Grievance Lifecycle Progression */}
-        <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+        <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
               <div>
-                <h3 className="text-sm font-bold text-[#172033]">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
                   Grievance Lifecycle Progression
                 </h3>
-                <p className="text-xs text-[#697386]">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Active procedural status across all registered cases
                 </p>
               </div>
-              <span className="text-xs font-bold tabular-nums text-[#697386]">
+              <span className="text-xs font-bold tabular-nums text-[var(--text-secondary)]">
                 {totalComplaints} Total Cases
               </span>
             </div>
@@ -285,7 +285,7 @@ export const OperationalDashboard: React.FC = () => {
               {statusDistribution.map((item) => (
                 <div key={item.status} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[#172033] flex items-center gap-2">
+                    <span className="font-semibold text-[var(--text-primary)] flex items-center gap-2">
                       <span
                         className={`h-2.5 w-2.5 rounded-full ${
                           item.status === "Resolved"
@@ -294,26 +294,26 @@ export const OperationalDashboard: React.FC = () => {
                             ? "bg-rose-500"
                             : item.status.includes("Notice") || item.status.includes("Hearing")
                             ? "bg-amber-500"
-                            : "bg-[#315EFB]"
+                            : "bg-[var(--primary-accent)]"
                         }`}
                       />
                       {item.status}
                     </span>
-                    <span className="tabular-nums text-[#697386]">
-                      <span className="font-bold text-[#172033]">{item.count}</span> ({item.percentage}%)
+                    <span className="tabular-nums text-[var(--text-secondary)]">
+                      <span className="font-bold text-[var(--text-primary)]">{item.count}</span> ({item.percentage}%)
                     </span>
                   </div>
                   {/* Visual Bar */}
-                  <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-2.5 w-full rounded-full bg-[var(--bg-surface-elevated)] overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
                         item.status === "Resolved"
-                          ? "bg-[#168568]"
+                          ? "bg-emerald-500"
                           : item.status === "Escalated"
-                          ? "bg-[#C53B42]"
+                          ? "bg-rose-500"
                           : item.status.includes("Notice") || item.status.includes("Hearing")
-                          ? "bg-[#B7791F]"
-                          : "bg-[#315EFB]"
+                          ? "bg-amber-500"
+                          : "bg-[var(--primary-accent)]"
                       }`}
                       style={{ width: `${Math.max(item.percentage, item.count > 0 ? 5 : 0)}%` }}
                     />
@@ -323,25 +323,25 @@ export const OperationalDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-[#697386]">
-            <span>Resolved: <strong className="text-emerald-700">{complaints.filter((c) => c.status === "Resolved").length}</strong> cases</span>
-            <span>Unresolved: <strong className="text-slate-800">{activeCount}</strong> cases</span>
+          <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
+            <span>Resolved: <strong className="text-emerald-500">{complaints.filter((c) => c.status === "Resolved").length}</strong> cases</span>
+            <span>Unresolved: <strong className="text-[var(--text-primary)]">{activeCount}</strong> cases</span>
           </div>
         </motion.div>
 
         {/* Bureau Case Distribution */}
-        <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+        <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
               <div>
-                <h3 className="text-sm font-bold text-[#172033]">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
                   Bureau Case Distribution
                 </h3>
-                <p className="text-xs text-[#697386]">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Jurisdictional allocation and pending scrutiny loads
                 </p>
               </div>
-              <span className="text-xs font-bold text-[#697386]">
+              <span className="text-xs font-bold text-[var(--text-secondary)]">
                 5 Apex Cells
               </span>
             </div>
@@ -351,24 +351,24 @@ export const OperationalDashboard: React.FC = () => {
               {bureauDistribution.map((item) => (
                 <div key={item.bureau} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[#172033] truncate max-w-[200px] sm:max-w-[280px]">
+                    <span className="font-semibold text-[var(--text-primary)] truncate max-w-[200px] sm:max-w-[280px]">
                       {item.bureau}
                     </span>
                     <div className="flex items-center gap-2 tabular-nums text-xs">
                       {item.critical > 0 && (
-                        <span className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.2 text-[10px] font-bold bg-rose-50 text-[#C53B42] border border-rose-200">
+                        <span className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.2 text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
                           {item.critical} Critical
                         </span>
                       )}
-                      <span className="text-[#697386]">
-                        <span className="font-bold text-[#172033]">{item.active}</span> active / {item.total} total
+                      <span className="text-[var(--text-secondary)]">
+                        <span className="font-bold text-[var(--text-primary)]">{item.active}</span> active / {item.total} total
                       </span>
                     </div>
                   </div>
                   {/* Progress bar */}
-                  <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-2.5 w-full rounded-full bg-[var(--bg-surface-elevated)] overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-slate-700 transition-all duration-300"
+                      className="h-full rounded-full bg-[var(--primary-accent)]/80 transition-all duration-300"
                       style={{ width: `${Math.max(item.percentage, item.total > 0 ? 6 : 0)}%` }}
                     />
                   </div>
@@ -377,9 +377,9 @@ export const OperationalDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-[#697386]">
+          <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
             <span>Lead Volume: <strong>{bureauDistribution[0]?.bureau || "Approval Bureau"}</strong></span>
-            <Link href="/complaints" className="text-[#315EFB] font-bold hover:underline">
+            <Link href="/complaints" className="text-[var(--primary-accent)] font-bold hover:underline">
               View Bureau Registry &rarr;
             </Link>
           </div>
@@ -389,47 +389,47 @@ export const OperationalDashboard: React.FC = () => {
       {/* Priority Queue, Overlap Review & Audit Stream */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* Section E: Priority Queue / Attention Required (7 cols) */}
-        <motion.div variants={fadeInUpVariants} className="lg:col-span-7 rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <motion.div variants={fadeInUpVariants} className="lg:col-span-7 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[#172033]">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
                   Priority Scrutiny Queue
                 </h3>
-                <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-[#C53B42] border border-rose-200">
+                <span className="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-bold text-rose-500 border border-rose-500/20">
                   {attentionRequiredCases.length} Requiring Action
                 </span>
               </div>
-              <p className="text-xs text-[#697386]">
+              <p className="text-xs text-[var(--text-secondary)]">
                 Active cases sorted by statutory urgency, statutory deadline &amp; priority
               </p>
             </div>
             <Link
               href="/complaints"
-              className="text-xs font-bold text-[#315EFB] hover:underline shrink-0"
+              className="text-xs font-bold text-[var(--primary-accent)] hover:underline shrink-0"
             >
               View all ({totalComplaints}) &rarr;
             </Link>
           </div>
 
           {attentionRequiredCases.length === 0 ? (
-            <div className="py-12 text-center text-xs text-[#697386]">
-              <IconCheckCircle size={28} className="mx-auto mb-2 text-emerald-600" />
-              <p className="font-bold text-[#172033]">No pending high-priority cases</p>
-              <p className="text-slate-400 mt-0.5">All urgent grievances have been addressed</p>
+            <div className="py-12 text-center text-xs text-[var(--text-secondary)]">
+              <IconCheckCircle size={28} className="mx-auto mb-2 text-emerald-500" />
+              <p className="font-bold text-[var(--text-primary)]">No pending high-priority cases</p>
+              <p className="text-[var(--text-muted)] mt-0.5">All urgent grievances have been addressed</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-[var(--border-subtle)]">
               {attentionRequiredCases.map((c) => (
                 <div
                   key={c.id}
-                  className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 hover:bg-slate-50/80 -mx-2 px-2 rounded-lg transition-colors"
+                  className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 hover:bg-[var(--bg-surface-elevated)] -mx-2 px-2 rounded-lg transition-colors"
                 >
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/complaints/${c.id}`}
-                        className="font-mono text-xs font-bold text-[#315EFB] hover:underline"
+                        className="font-mono text-xs font-bold text-[var(--primary-accent)] hover:underline"
                       >
                         {c.id}
                       </Link>
@@ -438,14 +438,14 @@ export const OperationalDashboard: React.FC = () => {
                     </div>
                     <Link
                       href={`/complaints/${c.id}`}
-                      className="block text-xs font-bold text-[#172033] hover:text-[#315EFB] transition-colors truncate"
+                      className="block text-xs font-bold text-[var(--text-primary)] hover:text-[var(--primary-accent)] transition-colors truncate"
                       title={c.title}
                     >
                       {c.title}
                     </Link>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#697386]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-secondary)]">
                       <span className="flex items-center gap-1 truncate max-w-[220px]">
-                        <IconBuilding size={12} className="shrink-0 text-slate-400" />
+                        <IconBuilding size={12} className="shrink-0 text-[var(--text-muted)]" />
                         <span className="truncate">{c.institutionName}</span>
                       </span>
                       <span>&bull;</span>
@@ -458,10 +458,10 @@ export const OperationalDashboard: React.FC = () => {
                   <div className="shrink-0 self-start sm:self-center">
                     <Link
                       href={`/complaints/${c.id}`}
-                      className="inline-flex items-center gap-1 rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1 text-xs font-semibold text-[#172033] hover:bg-slate-100 hover:border-slate-300 shadow-2xs transition-colors"
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)]/40 hover:text-[var(--primary-accent)] shadow-2xs transition-colors"
                     >
                       <span>Dossier</span>
-                      <IconChevronRight size={13} className="text-[#697386]" />
+                      <IconChevronRight size={13} className="text-[var(--text-muted)]" />
                     </Link>
                   </div>
                 </div>
@@ -473,69 +473,69 @@ export const OperationalDashboard: React.FC = () => {
         {/* Overlap Review Panel & Recent Activity */}
         <div className="lg:col-span-5 space-y-5">
           {/* Overlap Review Panel */}
-          <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-[#172033]">
+                  <h3 className="text-sm font-bold text-[var(--text-primary)]">
                     Candidate Overlap Queue
                   </h3>
-                  <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-[#92400E] border border-amber-200">
+                  <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-500 border border-amber-500/20">
                     {pendingOverlaps.length} Pending
                   </span>
                 </div>
-                <p className="text-xs text-[#697386]">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Multi-signal matches requiring human adjudication
                 </p>
               </div>
               <Link
                 href="/overlap-review"
-                className="text-xs font-bold text-[#315EFB] hover:underline shrink-0"
+                className="text-xs font-bold text-[var(--primary-accent)] hover:underline shrink-0"
               >
                 Queue &rarr;
               </Link>
             </div>
 
             {pendingOverlaps.length === 0 ? (
-              <div className="py-8 text-center text-xs text-[#697386]">
-                <IconCheckCircle size={24} className="mx-auto mb-1.5 text-emerald-600" />
-                <p className="font-bold text-[#172033]">No pending overlap candidates</p>
-                <p className="text-slate-400 mt-0.5">All algorithmic candidate matches have been reviewed</p>
+              <div className="py-8 text-center text-xs text-[var(--text-secondary)]">
+                <IconCheckCircle size={24} className="mx-auto mb-1.5 text-emerald-500" />
+                <p className="font-bold text-[var(--text-primary)]">No pending overlap candidates</p>
+                <p className="text-[var(--text-muted)] mt-0.5">All algorithmic candidate matches have been reviewed</p>
               </div>
             ) : (
               <div className="mt-3.5 space-y-3">
                 {pendingOverlaps.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-3.5 space-y-2 hover:border-slate-300 transition-colors shadow-2xs"
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3.5 space-y-2 hover:border-[var(--primary-accent)]/40 transition-colors shadow-2xs"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[#172033]">
+                      <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
                         {item.id}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-[#315EFB] border border-blue-200" title="Algorithmic signal score only - not a final decision">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--primary-accent-subtle)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-accent)] border border-[var(--primary-accent)]/30" title="Algorithmic signal score only - not a final decision">
                         <span>{item.signalScore}% Signal Match</span>
                       </span>
                     </div>
 
-                    <div className="text-xs text-[#172033] flex items-center justify-between gap-2">
+                    <div className="text-xs text-[var(--text-primary)] flex items-center justify-between gap-2">
                       <div className="truncate flex-1">
-                        <span className="font-mono font-bold text-[#315EFB]">{item.sourceComplaintId}</span>
-                        <span className="text-slate-400 mx-1">&harr;</span>
-                        <span className="font-mono font-bold text-[#315EFB]">{item.targetComplaintId}</span>
+                        <span className="font-mono font-bold text-[var(--primary-accent)]">{item.sourceComplaintId}</span>
+                        <span className="text-[var(--text-muted)] mx-1">&harr;</span>
+                        <span className="font-mono font-bold text-[var(--primary-accent)]">{item.targetComplaintId}</span>
                       </div>
-                      <span className="text-[10px] text-[#697386] shrink-0 font-medium">
+                      <span className="text-[10px] text-[var(--text-secondary)] shrink-0 font-medium">
                         {item.matchingSignals.length} signals
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 text-[10px] text-[#697386]">
+                    <div className="flex flex-wrap gap-1 text-[10px] text-[var(--text-secondary)]">
                       {item.matchingSignals.slice(0, 2).map((sig) => (
                         <span
                           key={sig.type}
-                          className="inline-block rounded-md bg-white px-1.5 py-0.5 border border-slate-200 truncate max-w-[240px]"
+                          className="inline-block rounded-md bg-[var(--bg-surface-elevated)] px-1.5 py-0.5 border border-[var(--border-subtle)] truncate max-w-[240px]"
                         >
-                          <span className="font-semibold text-slate-700">{sig.type}:</span> {sig.detail}
+                          <span className="font-semibold text-[var(--text-primary)]">{sig.type}:</span> {sig.detail}
                         </span>
                       ))}
                     </div>
@@ -543,7 +543,7 @@ export const OperationalDashboard: React.FC = () => {
                     <div className="pt-1 flex justify-end">
                       <Link
                         href={`/overlap-review/compare?source=${item.sourceComplaintId}&target=${item.targetComplaintId}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#315EFB] hover:text-[#254EDB]"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[var(--primary-accent)] hover:text-[var(--primary-accent-hover)]"
                       >
                         <span>Compare Side-by-Side</span>
                         <IconChevronRight size={13} />
@@ -556,43 +556,43 @@ export const OperationalDashboard: React.FC = () => {
           </motion.div>
 
           {/* Recent Administrative Activity */}
-          <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <motion.div variants={fadeInUpVariants} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
               <div>
-                <h3 className="text-sm font-bold text-[#172033]">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
                   Recent Audit Activity
                 </h3>
-                <p className="text-xs text-[#697386]">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Verified administrative actions on dossiers
                 </p>
               </div>
               <Link
                 href="/audit-trail"
-                className="text-xs font-bold text-[#315EFB] hover:underline"
+                className="text-xs font-bold text-[var(--primary-accent)] hover:underline"
               >
                 Log &rarr;
               </Link>
             </div>
 
-            <div className="mt-3 divide-y divide-slate-100">
+            <div className="mt-3 divide-y divide-[var(--border-subtle)]">
               {recentActivity.map((log) => (
                 <div key={log.id} className="py-2.5 space-y-1">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-[#172033] flex items-center gap-1.5">
-                      <IconScale size={13} className="text-[#315EFB]" />
+                    <span className="font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <IconScale size={13} className="text-[var(--primary-accent)]" />
                       {log.action}
                     </span>
-                    <span className="tabular-nums text-[#697386] font-medium">{log.timestamp}</span>
+                    <span className="tabular-nums text-[var(--text-secondary)] font-medium">{log.timestamp}</span>
                   </div>
-                  <p className="text-xs text-[#697386] line-clamp-1">
+                  <p className="text-xs text-[var(--text-secondary)] line-clamp-1">
                     {log.details}
                   </p>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                     <span>{log.actor}</span>
                     {log.complaintId && (
                       <Link
                         href={`/complaints/${log.complaintId}`}
-                        className="font-mono font-bold text-[#315EFB] hover:underline"
+                        className="font-mono font-bold text-[var(--primary-accent)] hover:underline"
                       >
                         {log.complaintId}
                       </Link>

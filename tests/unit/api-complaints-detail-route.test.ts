@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET, PATCH } from '@/app/api/v1/complaints/[id]/route';
 import { db } from '@/server/db';
 import * as authModule from '@/lib/auth';
+import * as auditModule from '@/modules/audit/service';
 import * as overlapModule from '@/modules/overlap-detection';
 
 describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
@@ -96,8 +97,56 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
   });
 
   describe('PATCH /api/v1/complaints/[id]', () => {
-    it('should fail closed with 401 when unauthenticated', async () => {
-      // resolveAuthenticatedOfficer default returns null
+    it('should fail closed with 401 when unauthenticated and prototype mode is authenticated', async () => {
+      const origEnv = process.env.PROTOTYPE_ACCESS_MODE;
+      process.env.PROTOTYPE_ACCESS_MODE = 'authenticated';
+      try {
+        const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'UNDER_PRELIMINARY_REVIEW',
+            notes: 'Moving to preliminary review stage',
+          }),
+        });
+
+        const response = await PATCH(request, {
+          params: Promise.resolve({ id: 'cmp_test_001' }),
+        });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.error.code).toBe('UNAUTHORIZED');
+      } finally {
+        process.env.PROTOTYPE_ACCESS_MODE = origEnv;
+      }
+    });
+
+    it('should allow status update without authentication in default prototype mode', async () => {
+      const existingComplaint = {
+        id: 'cmp_test_001',
+        complaintNumber: 'CMP-2026-0001',
+        bureauId: 'bureau-test-001',
+        status: 'SUBMITTED',
+        priority: 'MEDIUM',
+        category: 'FEE_ANOMALY',
+      };
+
+      vi.spyOn(db.complaint, 'findUnique').mockResolvedValue(existingComplaint as any);
+
+      const mockUpdated = {
+        ...existingComplaint,
+        status: 'UNDER_PRELIMINARY_REVIEW',
+      };
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (cb: any) => {
+        return cb({
+          complaint: { update: vi.fn().mockResolvedValue(mockUpdated) },
+          caseAction: { create: vi.fn().mockResolvedValue({ id: 'act_01' }) },
+        });
+      });
+      const auditSpy = vi.spyOn(auditModule, 'createAuditLog').mockResolvedValue({} as any);
+
       const request = new Request('http://localhost:3000/api/v1/complaints/cmp_test_001', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -112,8 +161,17 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
       });
       const body = await response.json();
 
-      expect(response.status).toBe(401);
-      expect(body.error.code).toBe('UNAUTHORIZED');
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.complaint.status).toBe('UNDER_PRELIMINARY_REVIEW');
+      expect(auditSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'UPDATE_COMPLAINT',
+          actorId: null,
+          actorRole: 'PROTOTYPE_REVIEWER',
+        }),
+        expect.anything()
+      );
     });
 
     it('should return 400 on malformed JSON body', async () => {
@@ -202,7 +260,9 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
 
       expect(response.status).toBe(403);
       expect(body.error.code).toBe('FORBIDDEN');
-      expect(body.error.message).toContain('not authorized to modify complaints belonging to another bureau');
+      expect(body.error.message).toContain(
+        'not authorized to modify complaints belonging to another bureau'
+      );
     });
 
     it('should reject invalid status transitions (e.g., SUBMITTED -> RESOLVED directly)', async () => {
@@ -228,7 +288,9 @@ describe('Complaints Detail Route Handler (/api/v1/complaints/[id])', () => {
 
       expect(response.status).toBe(400);
       expect(body.error.code).toBe('INVALID_STATUS_TRANSITION');
-      expect(body.error.message).toContain("Transition from 'SUBMITTED' to 'RESOLVED' is not permitted");
+      expect(body.error.message).toContain(
+        "Transition from 'SUBMITTED' to 'RESOLVED' is not permitted"
+      );
     });
 
     it('should successfully update complaint status, create timeline action, and log audit trail when authenticated', async () => {

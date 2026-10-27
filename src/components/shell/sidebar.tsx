@@ -30,7 +30,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { name: 'Overview', href: '/', icon: IconDashboard },
+  { name: 'Home', href: '/', icon: IconDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: IconDashboard },
   { name: 'Complaints', href: '/complaints', icon: IconFileText },
   { name: 'Submit Complaint', href: '/submit-complaint', icon: IconFileText },
   { name: 'Overlap Review', href: '/overlap-review', icon: IconLayers, badge: 'overlaps' },
@@ -63,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col bg-[#0E1626] border-r border-slate-800/80 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col bg-[#0B1324] border-r border-slate-800/80 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
           isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
@@ -72,9 +73,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <Link
             href="/"
             onClick={onClose}
-            className="flex items-center gap-2.5 focus:outline-hidden focus:ring-2 focus:ring-[#315EFB] rounded-lg p-1 transition-all"
+            className="flex items-center gap-2.5 focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)] rounded-lg p-1 transition-all"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#315EFB] text-white shadow-[0_0_12px_rgba(49,94,251,0.4)]">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white shadow-[0_0_15px_var(--primary-accent-glow)] transition-colors"
+              style={{ backgroundColor: 'var(--primary-accent)' }}
+            >
               <IconShield size={18} />
             </div>
             <div>
@@ -114,9 +118,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 key={item.name}
                 href={item.href}
                 onClick={onClose}
-                className={`group relative flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-all focus:outline-hidden focus:ring-2 focus:ring-[#315EFB] ${
+                className={`group relative flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-all focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)] ${
                   active
-                    ? 'bg-[#18243C] text-white font-semibold shadow-xs'
+                    ? 'bg-[#15233E] text-white font-semibold shadow-xs'
                     : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                 }`}
                 aria-current={active ? 'page' : undefined}
@@ -125,7 +129,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {active && (
                   <motion.span
                     layoutId="activeNavIndicator"
-                    className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-[#315EFB]"
+                    className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full transition-colors"
+                    style={{ backgroundColor: 'var(--primary-accent)' }}
                     transition={{ duration: 0.2 }}
                   />
                 )}
@@ -133,11 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <div className="flex items-center gap-3">
                   <Icon
                     size={17}
-                    className={
-                      active
-                        ? 'text-[#315EFB]'
-                        : 'text-slate-400 group-hover:text-slate-200 transition-colors'
-                    }
+                    className={active ? 'text-[var(--primary-accent)]' : 'text-slate-400 group-hover:text-slate-200 transition-colors'}
                   />
                   <span>{item.name}</span>
                 </div>

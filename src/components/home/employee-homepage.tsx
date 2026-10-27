@@ -16,11 +16,12 @@ import {
 } from '../ui/icons';
 import { StatusBadge, Badge } from '../ui/badge';
 import { AnimatedNumber } from '../motion/animated-number';
+import { OperationalDashboard } from '../dashboard/operational-dashboard';
+import { ThemeCustomizer } from '../ui/theme-customizer';
 
 export const EmployeeHomepage: React.FC = () => {
   const router = useRouter();
-  const { complaints, pendingOverlapCount, backendStatus, currentOfficer, openLoginModal } =
-    useComplaints();
+  const { complaints, pendingOverlapCount, backendStatus, currentOfficer } = useComplaints();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -119,32 +120,28 @@ export const EmployeeHomepage: React.FC = () => {
             </Link>
           </nav>
 
-          {/* Officer Status / Sign In */}
+          {/* Prototype Access / Scrutiny Status */}
           <div className="flex items-center gap-3">
-            {currentOfficer ? (
-              <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#315EFB]/10 text-[#315EFB] font-bold text-xs">
-                  <IconUser size={16} />
-                </div>
-                <div className="hidden sm:block text-left text-xs">
-                  <span className="block font-bold text-[#172033] leading-none">
-                    {currentOfficer.name}
-                  </span>
-                  <span className="block text-[10px] text-[#697386] font-mono leading-none mt-1">
-                    {currentOfficer.badgeNumber}
-                  </span>
-                </div>
+            <ThemeCustomizer />
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] transition-colors shadow-2xs"
+            >
+              Demo Login
+            </Link>
+            <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-accent)]/10 text-[var(--primary-accent)] font-bold text-xs">
+                <IconUser size={16} />
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={openLoginModal}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#315EFB]/30 bg-blue-50/60 px-3 py-1.5 text-xs font-bold text-[#315EFB] hover:bg-blue-100/60 transition-colors shadow-2xs"
-              >
-                <IconShield size={14} />
-                <span>Officer Sign In</span>
-              </button>
-            )}
+              <div className="hidden sm:block text-left text-xs">
+                <span className="block font-bold text-[#172033] leading-none">
+                  {currentOfficer ? currentOfficer.name : 'Apex Scrutiny Reviewer'}
+                </span>
+                <span className="block text-[10px] text-emerald-600 font-semibold leading-none mt-1">
+                  {currentOfficer ? currentOfficer.badgeNumber : 'Open Prototype Access'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -400,6 +397,30 @@ export const EmployeeHomepage: React.FC = () => {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Live Operational Command Center & Triage Dashboard */}
+        <section className="space-y-4">
+          <div className="border-b border-[#E5E0D5] pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#315EFB]">
+                Central Intelligence
+              </span>
+              <h2 className="text-2xl font-black tracking-tight text-[#172033]">
+                Operational Caseload &amp; Triage Dashboard
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/overlap-review"
+                className="text-xs font-bold text-[#315EFB] hover:text-[#254EDB] transition-colors inline-flex items-center gap-1"
+              >
+                <span>Overlap Review Queue ({pendingOverlapCount})</span>
+                <IconArrowRight size={13} />
+              </Link>
+            </div>
+          </div>
+          <OperationalDashboard />
         </section>
 
         {/* 4. Four-Step Review Process Explanation (Simple Language) */}

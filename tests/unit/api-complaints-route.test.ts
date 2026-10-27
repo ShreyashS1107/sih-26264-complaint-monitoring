@@ -113,10 +113,66 @@ describe('POST /api/v1/complaints Route Handler', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  // 3. Security Gate — Unauthenticated request rejected before database mutation
-  it('should fail closed with 401 when unauthenticated before any database write', async () => {
-    // resolveAuthenticatedOfficer default returns null
-    const txSpy = vi.spyOn(db, '$transaction');
+  // 3. Security Gate — Unauthenticated request behavior
+  it('should fail closed with 401 when unauthenticated and prototype mode is authenticated', async () => {
+    const origEnv = process.env.PROTOTYPE_ACCESS_MODE;
+    process.env.PROTOTYPE_ACCESS_MODE = 'authenticated';
+    try {
+      // resolveAuthenticatedOfficer default returns null
+      const txSpy = vi.spyOn(db, '$transaction');
+
+      const request = new Request('http://localhost:3000/api/v1/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validPayload),
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(body.success).toBe(false);
+      expect(body.data).toBeNull();
+      expect(body.error.code).toBe('UNAUTHORIZED');
+      expect(body.error.message).toContain('Authentication required');
+      // Ensure no database transaction or creation was even attempted
+      expect(txSpy).not.toHaveBeenCalled();
+    } finally {
+      process.env.PROTOTYPE_ACCESS_MODE = origEnv;
+    }
+  });
+
+  it('should allow unauthenticated complaint creation in default prototype mode with prototype attribution', async () => {
+    vi.spyOn(db.institution, 'findUnique').mockResolvedValue({ id: 'inst-test-001' } as any);
+    vi.spyOn(db.bureau, 'findUnique').mockResolvedValue({ id: 'bureau-test-001' } as any);
+
+    const mockComplaint = {
+      id: 'cmp_created_proto_001',
+      complaintNumber: 'CMP-2026-0009',
+      bureauId: 'bureau-test-001',
+      subject: validPayload.subject,
+      description: validPayload.description,
+      institution: { id: 'inst-test-001', name: 'Test Institute' },
+      bureau: { id: 'bureau-test-001', name: 'AICTE Bureau' },
+    };
+
+    vi.spyOn(db, '$transaction').mockImplementation(async (callback: any) => {
+      return callback({
+        complaint: {
+          create: vi.fn().mockResolvedValue(mockComplaint),
+        },
+        auditLog: {
+          create: vi.fn().mockResolvedValue({ id: 'audit-proto-001' }),
+        },
+      });
+    });
+    const auditSpy = vi.spyOn(auditModule, 'createAuditLog');
+    vi.spyOn(overlapModule, 'analyzeAndPersistOverlaps').mockResolvedValue({
+      complaintId: 'cmp_created_proto_001',
+      evaluatedPoolSize: 0,
+      detectedCandidateCount: 0,
+      candidates: [],
+    } as any);
 
     const request = new Request('http://localhost:3000/api/v1/complaints', {
       method: 'POST',
@@ -127,13 +183,17 @@ describe('POST /api/v1/complaints Route Handler', () => {
     const response = await POST(request);
     const body = await response.json();
 
-    expect(response.status).toBe(401);
-    expect(body.success).toBe(false);
-    expect(body.data).toBeNull();
-    expect(body.error.code).toBe('UNAUTHORIZED');
-    expect(body.error.message).toContain('Authentication required');
-    // Ensure no database transaction or creation was even attempted
-    expect(txSpy).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.complaint.id).toBe('cmp_created_proto_001');
+    expect(auditSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'INGEST_COMPLAINT',
+        actorId: null,
+        actorRole: 'PROTOTYPE_REVIEWER',
+      }),
+      expect.anything()
+    );
   });
 
   it('should reject with 403 FORBIDDEN when officer attempts to ingest complaint for another bureau', async () => {
@@ -217,7 +277,9 @@ describe('POST /api/v1/complaints Route Handler', () => {
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe('NOT_FOUND');
-    expect(body.error.message).toContain("Assigned officer with ID 'officer-missing-999' was not found");
+    expect(body.error.message).toContain(
+      "Assigned officer with ID 'officer-missing-999' was not found"
+    );
   });
 
   // 5. Conflict handling (P2002)

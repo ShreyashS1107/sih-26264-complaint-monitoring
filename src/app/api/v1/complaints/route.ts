@@ -1,6 +1,7 @@
 import { db } from '@/server/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
+import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
 import {
   complaintCategoryEnum,
@@ -62,12 +63,9 @@ export async function GET(request: Request) {
 
     const validation = complaintListQuerySchema.safeParse(rawQuery);
     if (!validation.success) {
-      return apiError(
-        'VALIDATION_ERROR',
-        'Invalid query parameters provided.',
-        400,
-        { details: validation.error.flatten() }
-      );
+      return apiError('VALIDATION_ERROR', 'Invalid query parameters provided.', 400, {
+        details: validation.error.flatten(),
+      });
     }
 
     const query = validation.data;
@@ -152,8 +150,7 @@ export async function GET(request: Request) {
       institution: c.institution,
       bureau: c.bureau,
       assignedOfficer: c.assignedOfficer,
-      overlapCount:
-        c._count.primaryOverlapCandidates + c._count.secondaryOverlapCandidates,
+      overlapCount: c._count.primaryOverlapCandidates + c._count.secondaryOverlapCandidates,
     }));
 
     return apiSuccess({
@@ -208,27 +205,26 @@ export async function POST(request: Request) {
     // 2. Validate payload against createComplaintSchema
     const validation = createComplaintSchema.safeParse(body);
     if (!validation.success) {
-      return apiError(
-        'VALIDATION_ERROR',
-        'Invalid complaint data provided.',
-        400,
-        { details: validation.error.flatten() }
-      );
+      return apiError('VALIDATION_ERROR', 'Invalid complaint data provided.', 400, {
+        details: validation.error.flatten(),
+      });
     }
     const input = validation.data;
 
-    // 3. Resolve trusted authenticated officer before any database mutation
+    // 3. Resolve identity and verify prototype / authenticated access
     const officer = await resolveAuthenticatedOfficer(request);
-    if (!officer) {
+    const access = checkPrototypeMutationAccess(request, officer);
+
+    if (!access.allowed) {
       return apiError(
-        'UNAUTHORIZED',
-        'Authentication required. No trusted officer session resolved.',
-        401
+        access.error || 'UNAUTHORIZED',
+        access.message || 'Authentication required.',
+        access.status || 401
       );
     }
 
-    // 4. Enforce bureau authorization: non-admin officers can only ingest complaints for their own bureau
-    if (officer.role !== 'CENTRAL_ADMIN' && officer.bureauId !== input.bureauId) {
+    // 4. Enforce bureau authorization when an authenticated officer is present
+    if (officer && officer.role !== 'CENTRAL_ADMIN' && officer.bureauId !== input.bureauId) {
       return apiError(
         'FORBIDDEN',
         `Officers of role '${officer.role}' can only ingest complaints for their assigned bureau.`,
@@ -257,11 +253,7 @@ export async function POST(request: Request) {
     }
 
     if (!bureau) {
-      return apiError(
-        'NOT_FOUND',
-        `Bureau with ID '${input.bureauId}' was not found.`,
-        404
-      );
+      return apiError('NOT_FOUND', `Bureau with ID '${input.bureauId}' was not found.`, 404);
     }
 
     if (input.assignedOfficerId) {
@@ -314,8 +306,8 @@ export async function POST(request: Request) {
             entityType: 'COMPLAINT',
             entityId: complaint.id,
             action: 'INGEST_COMPLAINT',
-            actorId: officer.id,
-            actorRole: officer.role,
+            actorId: officer?.id ?? null,
+            actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
             bureauId: complaint.bureauId,
             ipAddress,
             details: {
@@ -327,6 +319,7 @@ export async function POST(request: Request) {
               priority: complaint.priority,
               status: complaint.status,
               complainantType: complaint.complainantType,
+              prototypeAccess: !officer,
             },
           },
           tx
@@ -365,8 +358,8 @@ export async function POST(request: Request) {
           entityType: 'COMPLAINT',
           entityId: createdComplaint.id,
           action: 'OVERLAP_ANALYSIS_FAILED',
-          actorId: officer.id,
-          actorRole: officer.role,
+          actorId: officer?.id ?? null,
+          actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
           bureauId: createdComplaint.bureauId,
           ipAddress,
           details: {
@@ -374,6 +367,7 @@ export async function POST(request: Request) {
               analysisError instanceof Error
                 ? analysisError.message
                 : 'Unknown overlap analysis error',
+            prototypeAccess: !officer,
           },
         });
       } catch {

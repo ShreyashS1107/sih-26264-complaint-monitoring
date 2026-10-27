@@ -11,7 +11,6 @@ import {
   IconAlertTriangle,
   IconArrowRight,
   IconChevronLeft,
-  IconShield,
   IconInfo,
 } from '../ui/icons';
 import { Badge } from '../ui/badge';
@@ -94,8 +93,7 @@ interface ComplaintSubmissionFormProps {
 }
 
 export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = ({ onSuccess }) => {
-  const { backendStatus, currentOfficer, openLoginModal, submitComplaint, isSubmitting } =
-    useComplaints();
+  const { backendStatus, currentOfficer, submitComplaint, isSubmitting } = useComplaints();
 
   // Active step (1: Institution, 2: Details, 3: Evidence & Review)
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -261,15 +259,6 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
     if (isSubmitting) return; // Prevent duplicate clicks
     if (!validateStep1() || !validateStep2()) return;
 
-    // Check auth for live database mode
-    if (backendStatus === 'connected' && !currentOfficer) {
-      setFormError(
-        'Authorized officer sign-in required to submit complaints to the live registry.'
-      );
-      openLoginModal();
-      return;
-    }
-
     setFormError(null);
 
     const validAllegations = allegations.map((a) => a.trim()).filter(Boolean);
@@ -337,30 +326,19 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             </p>
           </div>
 
-          {/* Officer Identity Status */}
+          {/* Officer Identity Status / Prototype Scrutiny Status */}
           <div className="text-left sm:text-right shrink-0">
-            {currentOfficer ? (
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-1.5 shadow-2xs">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <div className="text-left">
-                  <span className="block text-xs font-bold text-[#172033] leading-none">
-                    {currentOfficer.name}
-                  </span>
-                  <span className="block text-[10px] text-[#697386] font-mono leading-none mt-0.5">
-                    {currentOfficer.badgeNumber}
-                  </span>
-                </div>
+            <div className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-1.5 shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <div className="text-left">
+                <span className="block text-xs font-bold text-[#172033] leading-none">
+                  {currentOfficer ? currentOfficer.name : 'Apex Scrutiny Reviewer'}
+                </span>
+                <span className="block text-[10px] text-[#697386] font-mono leading-none mt-0.5">
+                  {currentOfficer ? currentOfficer.badgeNumber : 'PROTOTYPE-ACCESS'}
+                </span>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={openLoginModal}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#315EFB]/30 bg-blue-50/50 px-3 py-1.5 text-xs font-bold text-[#315EFB] hover:bg-blue-50 transition-colors shadow-2xs"
-              >
-                <IconShield size={14} />
-                <span>Sign In as Officer</span>
-              </button>
-            )}
+            </div>
           </div>
         </div>
 

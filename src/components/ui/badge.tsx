@@ -8,11 +8,11 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<NonNullable<BadgeProps["variant"]>, string> = {
-  neutral: "bg-slate-100 text-slate-700 border-slate-200",
-  primary: "bg-blue-50 text-blue-700 border-blue-200",
-  success: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  warning: "bg-amber-50 text-amber-800 border-amber-200",
-  critical: "bg-rose-50 text-rose-800 border-rose-200",
+  neutral: "bg-slate-500/10 text-slate-400 dark:text-slate-300 border-slate-500/25",
+  primary: "bg-[var(--primary-accent)]/15 text-[var(--primary-accent)] border-[var(--primary-accent)]/30 shadow-[0_0_8px_var(--primary-accent-glow)]",
+  success: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  warning: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  critical: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
 };
 
 export const Badge: React.FC<BadgeProps> = ({

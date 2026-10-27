@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { ApiStatusModal } from '../ui/api-status-modal';
+
 import { OfficerLoginModal } from '../auth/officer-login-modal';
 
 interface AppShellProps {
@@ -15,10 +16,10 @@ function ShellLayout({ children }: AppShellProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // The homepage and architecture / explainer page have their own standalone presentation without the standard dashboard sidebar and header
-  if (pathname === '/' || pathname === '/how-it-works') {
+  // Standalone pages (landing, login, and architecture explainer)
+  if (pathname === '/' || pathname === '/how-it-works' || pathname === '/login') {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#315EFB]/30 selection:text-white">
+      <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased selection:bg-[var(--primary-accent)]/30 selection:text-white transition-colors duration-200">
         <ApiStatusModal />
         <OfficerLoginModal />
         {children}
@@ -27,7 +28,7 @@ function ShellLayout({ children }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F7F5F0] text-[#0F172A] antialiased selection:bg-[#315EFB]/20 selection:text-[#050811]">
+    <div className="flex min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased selection:bg-[var(--primary-accent)]/30 selection:text-white transition-colors duration-200">
       <ApiStatusModal />
       <OfficerLoginModal />
       {/* Sidebar Navigation */}

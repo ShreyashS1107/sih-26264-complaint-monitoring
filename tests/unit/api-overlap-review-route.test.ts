@@ -3,6 +3,7 @@ import { GET } from '@/app/api/v1/overlap-candidates/route';
 import { POST } from '@/app/api/v1/overlap-candidates/[id]/review/route';
 import { db } from '@/server/db';
 import * as authModule from '@/lib/auth';
+import * as auditModule from '@/modules/audit/service';
 
 describe('Overlap Review Routes (/api/v1/overlap-candidates)', () => {
   const mockOfficer: authModule.AuthenticatedOfficer = {
@@ -69,9 +70,7 @@ describe('Overlap Review Routes (/api/v1/overlap-candidates)', () => {
     });
 
     it('should return 400 on invalid query parameters', async () => {
-      const request = new Request(
-        'http://localhost:3000/api/v1/overlap-candidates?minScore=2.5'
-      );
+      const request = new Request('http://localhost:3000/api/v1/overlap-candidates?minScore=2.5');
       const response = await GET(request);
       const body = await response.json();
 
@@ -81,7 +80,67 @@ describe('Overlap Review Routes (/api/v1/overlap-candidates)', () => {
   });
 
   describe('POST /api/v1/overlap-candidates/[id]/review', () => {
-    it('should fail closed with 401 when unauthenticated', async () => {
+    it('should fail closed with 401 when unauthenticated and prototype mode is authenticated', async () => {
+      const origEnv = process.env.PROTOTYPE_ACCESS_MODE;
+      process.env.PROTOTYPE_ACCESS_MODE = 'authenticated';
+      try {
+        const request = new Request(
+          'http://localhost:3000/api/v1/overlap-candidates/cand_test_001/review',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              decision: 'CONFIRMED_OVERLAP',
+              notes: 'Both complaints describe the exact same unapproved building levy.',
+            }),
+          }
+        );
+
+        const response = await POST(request, {
+          params: Promise.resolve({ id: 'cand_test_001' }),
+        });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.error.code).toBe('UNAUTHORIZED');
+      } finally {
+        process.env.PROTOTYPE_ACCESS_MODE = origEnv;
+      }
+    });
+
+    it('should allow review without authentication when prototype mode is open', async () => {
+      vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue({
+        id: 'cand_test_001',
+        primaryComplaintId: 'cmp_001',
+        candidateComplaintId: 'cmp_002',
+        reviewStatus: 'PENDING_REVIEW',
+        overallScore: 0.88,
+        primaryComplaint: { bureauId: 'bureau-test-001', complaintNumber: 'CMP-2026-0001' },
+        candidateComplaint: { bureauId: 'bureau-test-002', complaintNumber: 'CMP-2026-0002' },
+      } as any);
+
+      const mockUpdated = {
+        id: 'cand_test_001',
+        reviewStatus: 'CONFIRMED_OVERLAP',
+        reviewedAt: new Date(),
+        reviewedById: null,
+      };
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (cb: any) => {
+        return cb({
+          overlapCandidate: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+          },
+          caseAction: {
+            createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_proto_01' }),
+          },
+        });
+      });
+      const auditSpy = vi.spyOn(auditModule, 'createAuditLog');
+
       const request = new Request(
         'http://localhost:3000/api/v1/overlap-candidates/cand_test_001/review',
         {
@@ -99,8 +158,17 @@ describe('Overlap Review Routes (/api/v1/overlap-candidates)', () => {
       });
       const body = await response.json();
 
-      expect(response.status).toBe(401);
-      expect(body.error.code).toBe('UNAUTHORIZED');
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.candidate.reviewStatus).toBe('CONFIRMED_OVERLAP');
+      expect(auditSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'RECORD_OVERLAP_REVIEW',
+          actorId: null,
+          actorRole: 'PROTOTYPE_REVIEWER',
+        }),
+        expect.anything()
+      );
     });
 
     it('should return 400 on malformed JSON body', async () => {

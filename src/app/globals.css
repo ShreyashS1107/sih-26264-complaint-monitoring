@@ -1,34 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  /* Surfaces & Inks */
-  --color-canvas: #F8F9FA;
-  --color-sidebar: #111827;
-  --color-ink-950: #0B0F19;
-  --color-ink-void: #050811;
-  --color-ink-900: #111827;
-  --color-ink-850: #161F33;
-  --color-ink-800: #1F2937;
-  --color-surface: #FFFFFF;
-  --color-surface-subtle: #F1F3F6;
-  --color-ivory: #F4F0E8;
-  --color-ivory-warm: #EFE9DC;
-  --color-ivory-surface: #FAF7F2;
+  /* Dynamic Theme Token Bindings */
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-surface-subtle: var(--bg-surface-subtle);
+  --color-surface-elevated: var(--bg-surface-elevated);
 
-  /* Primary Brand Accent (Electric Institutional Blue) */
-  --color-primary-accent: #315EFB;
-  --color-primary-accent-hover: #234CD6;
-  --color-primary-accent-subtle: #EFF4FF;
-  --color-primary-accent-border: #BFDBFE;
+  /* Primary Brand Accent Tokens */
+  --color-primary-accent: var(--primary-accent);
+  --color-primary-accent-hover: var(--primary-accent-hover);
+  --color-primary-accent-subtle: var(--primary-accent-subtle);
+  --color-primary-accent-border: var(--primary-accent-border);
+  --color-primary-accent-glow: var(--primary-accent-glow);
 
   /* Typography Colors */
-  --color-primary-text: #172033;
-  --color-secondary-text: #5A6474;
-  --color-tertiary-text: #94A3B8;
+  --color-primary-text: var(--text-primary);
+  --color-secondary-text: var(--text-secondary);
+  --color-tertiary-text: var(--text-muted);
 
   /* Borders & Dividers */
-  --color-border-subtle: #E2E8F0;
-  --color-border-strong: #CBD5E1;
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
 
   /* Semantic Status Tokens */
   --color-status-success: #0E7A5A;
@@ -44,24 +37,157 @@
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* =========================================================================
+   1. Root Default: Futuristic Dark Navy / Blue Theme
+   ========================================================================= */
 :root {
-  --background: #F8F9FA;
-  --foreground: #172033;
+  --theme-mode: dark;
+  --bg-canvas: #060B16;
+  --bg-surface: #0C1424;
+  --bg-surface-subtle: #111C33;
+  --bg-surface-elevated: #15223D;
+
+  --border-subtle: rgba(59, 130, 246, 0.18);
+  --border-strong: rgba(59, 130, 246, 0.45);
+
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Default Electric Blue */
+  --primary-accent: #315EFB;
+  --primary-accent-hover: #224EDB;
+  --primary-accent-subtle: rgba(49, 94, 251, 0.15);
+  --primary-accent-border: rgba(49, 94, 251, 0.35);
+  --primary-accent-glow: rgba(49, 94, 251, 0.45);
+
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
 }
 
+/* =========================================================================
+   2. Light Mode Overrides
+   ========================================================================= */
+[data-theme="light"],
+.light {
+  --theme-mode: light;
+  --bg-canvas: #F8F9FA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #F1F5F9;
+  --bg-surface-elevated: #FFFFFF;
+
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
+}
+
+/* =========================================================================
+   3. Accent Color Preset Selectors
+   ========================================================================= */
+[data-accent="cyan"] {
+  --primary-accent: #06B6D4;
+  --primary-accent-hover: #0891B2;
+  --primary-accent-subtle: rgba(6, 182, 212, 0.15);
+  --primary-accent-border: rgba(6, 182, 212, 0.35);
+  --primary-accent-glow: rgba(6, 182, 212, 0.45);
+}
+
+[data-accent="violet"] {
+  --primary-accent: #8B5CF6;
+  --primary-accent-hover: #7C3AED;
+  --primary-accent-subtle: rgba(139, 92, 246, 0.15);
+  --primary-accent-border: rgba(139, 92, 246, 0.35);
+  --primary-accent-glow: rgba(139, 92, 246, 0.45);
+}
+
+[data-accent="emerald"] {
+  --primary-accent: #10B981;
+  --primary-accent-hover: #059669;
+  --primary-accent-subtle: rgba(16, 185, 129, 0.15);
+  --primary-accent-border: rgba(16, 185, 129, 0.35);
+  --primary-accent-glow: rgba(16, 185, 129, 0.45);
+}
+
+[data-accent="rose"] {
+  --primary-accent: #F43F5E;
+  --primary-accent-hover: #E11D48;
+  --primary-accent-subtle: rgba(244, 63, 94, 0.15);
+  --primary-accent-border: rgba(244, 63, 94, 0.35);
+  --primary-accent-glow: rgba(244, 63, 94, 0.45);
+}
+
+[data-accent="amber"] {
+  --primary-accent: #F59E0B;
+  --primary-accent-hover: #D97706;
+  --primary-accent-subtle: rgba(245, 158, 11, 0.15);
+  --primary-accent-border: rgba(245, 158, 11, 0.35);
+  --primary-accent-glow: rgba(245, 158, 11, 0.45);
+}
+
+/* =========================================================================
+   4. Base Typography & Background
+   ========================================================================= */
 html {
   scroll-behavior: smooth;
+  color-scheme: dark light;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Reduced Motion Override for Accessibility */
+/* =========================================================================
+   5. Futuristic Aesthetic Utilities & Glassmorphism
+   ========================================================================= */
+.glass-panel {
+  background: var(--bg-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-panel-elevated {
+  background: var(--bg-surface-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-strong);
+}
+
+.glow-accent {
+  box-shadow: 0 0 25px -4px var(--primary-accent-glow);
+}
+
+.glow-accent-subtle {
+  box-shadow: 0 0 15px -3px var(--primary-accent-glow);
+}
+
+.cyber-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+[data-theme="light"] .cyber-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+/* =========================================================================
+   6. Accessibility & Reduced Motion Override
+   ========================================================================= */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -72,5 +198,3 @@ body {
     scroll-behavior: auto !important;
   }
 }
-
-

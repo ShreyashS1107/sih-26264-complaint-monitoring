@@ -1,6 +1,7 @@
 import { db } from '@/server/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
+import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
 import {
   complaintCategoryEnum,
@@ -147,13 +148,15 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    // 1. Resolve trusted authenticated officer before any mutation
+    // 1. Resolve identity and verify prototype / authenticated access
     const officer = await resolveAuthenticatedOfficer(request);
-    if (!officer) {
+    const access = checkPrototypeMutationAccess(request, officer);
+
+    if (!access.allowed) {
       return apiError(
-        'UNAUTHORIZED',
-        'Authentication required. No trusted officer session resolved.',
-        401
+        access.error || 'UNAUTHORIZED',
+        access.message || 'Authentication required.',
+        access.status || 401
       );
     }
 
@@ -171,12 +174,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const validation = updateComplaintSchema.safeParse(body);
     if (!validation.success) {
-      return apiError(
-        'VALIDATION_ERROR',
-        'Invalid update data provided.',
-        400,
-        { details: validation.error.flatten() }
-      );
+      return apiError('VALIDATION_ERROR', 'Invalid update data provided.', 400, {
+        details: validation.error.flatten(),
+      });
     }
 
     const input = validation.data;
@@ -204,15 +204,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
     if (!existing) {
-      return apiError(
-        'COMPLAINT_NOT_FOUND',
-        `Complaint with ID '${id}' was not found.`,
-        404
-      );
+      return apiError('COMPLAINT_NOT_FOUND', `Complaint with ID '${id}' was not found.`, 404);
     }
 
-    // 4. Enforce bureau authorization: non-admin officers can only update complaints within their bureau or assigned to them
+    // 4. Enforce bureau authorization when an authenticated officer is present
     if (
+      officer &&
       officer.role !== 'CENTRAL_ADMIN' &&
       officer.bureauId !== existing.bureauId &&
       existing.assignedOfficerId !== officer.id
@@ -296,11 +293,14 @@ export async function PATCH(request: Request, context: RouteContext) {
       await tx.caseAction.create({
         data: {
           complaintId: id,
-          officerId: officer.id,
+          officerId: officer?.id ?? null,
           actionType,
           previousStatus: existing.status,
           newStatus: input.status ?? existing.status,
           notes: input.notes,
+          metadata: {
+            prototypeAccess: !officer,
+          },
         },
       });
 
@@ -309,8 +309,8 @@ export async function PATCH(request: Request, context: RouteContext) {
           entityType: 'COMPLAINT',
           entityId: id,
           action: 'UPDATE_COMPLAINT',
-          actorId: officer.id,
-          actorRole: officer.role,
+          actorId: officer?.id ?? null,
+          actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
           bureauId: existing.bureauId,
           ipAddress,
           details: {
@@ -322,6 +322,7 @@ export async function PATCH(request: Request, context: RouteContext) {
             newCategory: input.category ?? existing.category,
             assignedOfficerId: input.assignedOfficerId,
             notes: input.notes,
+            prototypeAccess: !officer,
           },
         },
         tx

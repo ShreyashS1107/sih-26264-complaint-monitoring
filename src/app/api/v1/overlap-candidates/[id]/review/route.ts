@@ -1,6 +1,7 @@
 import { db } from '@/server/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
+import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
 import type { ActionType } from '@prisma/client';
 import { z } from 'zod';
@@ -10,11 +11,7 @@ type RouteContext = {
 };
 
 const reviewDecisionSchema = z.object({
-  decision: z.enum([
-    'FLAGGED_JOINT_REVIEW',
-    'CONFIRMED_OVERLAP',
-    'DISMISSED_INDEPENDENT',
-  ]),
+  decision: z.enum(['FLAGGED_JOINT_REVIEW', 'CONFIRMED_OVERLAP', 'DISMISSED_INDEPENDENT']),
   notes: z
     .string()
     .min(5, 'Review notes explaining the decision are required (minimum 5 characters)')
@@ -49,13 +46,15 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // 1. Resolve trusted authenticated officer before any mutation
+    // 1. Resolve identity and verify prototype / authenticated access
     const officer = await resolveAuthenticatedOfficer(request);
-    if (!officer) {
+    const access = checkPrototypeMutationAccess(request, officer);
+
+    if (!access.allowed) {
       return apiError(
-        'UNAUTHORIZED',
-        'Authentication required. No trusted officer session resolved.',
-        401
+        access.error || 'UNAUTHORIZED',
+        access.message || 'Authentication required.',
+        access.status || 401
       );
     }
 
@@ -73,12 +72,9 @@ export async function POST(request: Request, context: RouteContext) {
 
     const validation = reviewDecisionSchema.safeParse(body);
     if (!validation.success) {
-      return apiError(
-        'VALIDATION_ERROR',
-        'Invalid review decision payload.',
-        400,
-        { details: validation.error.flatten() }
-      );
+      return apiError('VALIDATION_ERROR', 'Invalid review decision payload.', 400, {
+        details: validation.error.flatten(),
+      });
     }
 
     const input = validation.data;
@@ -100,12 +96,13 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // 4. Enforce bureau authorization: only officers from an involved bureau or CENTRAL_ADMIN can review
+    // 4. Enforce bureau authorization when an authenticated officer is present
     const isBureauOfficer =
-      officer.bureauId === existing.primaryComplaint.bureauId ||
-      officer.bureauId === existing.candidateComplaint.bureauId;
+      officer &&
+      (officer.bureauId === existing.primaryComplaint.bureauId ||
+        officer.bureauId === existing.candidateComplaint.bureauId);
 
-    if (officer.role !== 'CENTRAL_ADMIN' && !isBureauOfficer) {
+    if (officer && officer.role !== 'CENTRAL_ADMIN' && !isBureauOfficer) {
       return apiError(
         'FORBIDDEN',
         'You are not authorized to review overlap candidates that do not involve your assigned bureau.',
@@ -122,7 +119,7 @@ export async function POST(request: Request, context: RouteContext) {
         data: {
           reviewStatus: input.decision,
           reviewNotes: input.notes,
-          reviewedById: officer.id,
+          reviewedById: officer?.id ?? null,
           reviewedAt: new Date(),
         },
         include: {
@@ -153,32 +150,32 @@ export async function POST(request: Request, context: RouteContext) {
 
       // Record CaseAction timeline entries on BOTH complaints
       const actionType: ActionType =
-        input.decision === 'DISMISSED_INDEPENDENT'
-          ? 'OVERLAP_DISMISSED'
-          : 'OVERLAP_LINKED';
+        input.decision === 'DISMISSED_INDEPENDENT' ? 'OVERLAP_DISMISSED' : 'OVERLAP_LINKED';
 
       await tx.caseAction.createMany({
         data: [
           {
             complaintId: existing.primaryComplaintId,
-            officerId: officer.id,
+            officerId: officer?.id ?? null,
             actionType,
             notes: `Cross-bureau overlap review with ${existing.candidateComplaint.complaintNumber} marked as ${input.decision}. Officer note: ${input.notes}`,
             metadata: {
               candidateId: id,
               decision: input.decision,
               counterpartComplaintNumber: existing.candidateComplaint.complaintNumber,
+              prototypeAccess: !officer,
             },
           },
           {
             complaintId: existing.candidateComplaintId,
-            officerId: officer.id,
+            officerId: officer?.id ?? null,
             actionType,
             notes: `Cross-bureau overlap review with ${existing.primaryComplaint.complaintNumber} marked as ${input.decision}. Officer note: ${input.notes}`,
             metadata: {
               candidateId: id,
               decision: input.decision,
               counterpartComplaintNumber: existing.primaryComplaint.complaintNumber,
+              prototypeAccess: !officer,
             },
           },
         ],
@@ -190,9 +187,9 @@ export async function POST(request: Request, context: RouteContext) {
           entityType: 'OVERLAP_CANDIDATE',
           entityId: id,
           action: 'RECORD_OVERLAP_REVIEW',
-          actorId: officer.id,
-          actorRole: officer.role,
-          bureauId: officer.bureauId,
+          actorId: officer?.id ?? null,
+          actorRole: officer?.role ?? PROTOTYPE_ACTOR_ROLE,
+          bureauId: officer?.bureauId ?? existing.primaryComplaint.bureauId,
           ipAddress,
           details: {
             decision: input.decision,
@@ -202,6 +199,7 @@ export async function POST(request: Request, context: RouteContext) {
             primaryComplaintNumber: existing.primaryComplaint.complaintNumber,
             candidateComplaintNumber: existing.candidateComplaint.complaintNumber,
             overallScore: existing.overallScore,
+            prototypeAccess: !officer,
           },
         },
         tx
