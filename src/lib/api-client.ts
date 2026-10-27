@@ -107,8 +107,20 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
   if (!json.success || !response.ok) {
     const errPayload = (json as ApiEnvelopeError).error;
+    let detailMsg = errPayload?.message || response.statusText || 'Operation failed';
+    if (errPayload?.details && typeof errPayload.details === 'object') {
+      const d = errPayload.details as any;
+      if (d.fieldErrors && typeof d.fieldErrors === 'object') {
+        const fieldIssues = Object.entries(d.fieldErrors)
+          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+          .join('; ');
+        if (fieldIssues) {
+          detailMsg = `${detailMsg} (${fieldIssues})`;
+        }
+      }
+    }
     throw new ApiError(
-      errPayload?.message || response.statusText || 'Operation failed',
+      detailMsg,
       errPayload?.code || `HTTP_${response.status}`,
       response.status,
       errPayload?.details
@@ -177,7 +189,7 @@ function mapFrontendStatusToBackend(status: ComplaintStatus): string {
   }
 }
 
-function mapBackendBureau(bureauNameOrCode?: string): BureauType {
+export function mapBackendBureau(bureauNameOrCode?: string): BureauType {
   const norm = bureauNameOrCode?.toLowerCase() || '';
   if (norm.includes('student') || norm.includes('grievance')) return 'Student Grievance Cell';
   if (norm.includes('faculty') || norm.includes('staff')) return 'Faculty Development Cell';
@@ -185,6 +197,51 @@ function mapBackendBureau(bureauNameOrCode?: string): BureauType {
   if (norm.includes('finance') || norm.includes('vigilance') || norm.includes('legal'))
     return 'Finance & Legal Cell';
   return 'Approval Bureau';
+}
+
+export function mapBureauTypeToCode(bureauNameOrCode?: string): string {
+  const norm = (bureauNameOrCode || '').toLowerCase();
+  if (norm.includes('student') || norm.includes('grievance')) return 'STUDENT_GRIEVANCE_CELL';
+  if (norm.includes('ragging')) return 'ANTI_RAGGING_CELL';
+  if (norm.includes('faculty') || norm.includes('staff')) return 'FACULTY_GRIEVANCE_CELL';
+  if (norm.includes('finance') || norm.includes('vigilance') || norm.includes('legal'))
+    return 'VIGILANCE_BUREAU';
+  return 'APPROVAL_BUREAU';
+}
+
+export function mapFrontendPriorityToBackend(
+  priority?: string
+): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  switch (priority?.toUpperCase()) {
+    case 'CRITICAL':
+      return 'CRITICAL';
+    case 'HIGH':
+      return 'HIGH';
+    case 'LOW':
+      return 'LOW';
+    case 'MEDIUM':
+    default:
+      return 'MEDIUM';
+  }
+}
+
+export function mapComplainantTypeToBackend(
+  type?: string
+): 'STUDENT' | 'FACULTY' | 'PARENT' | 'CITIZEN' | 'ANONYMOUS' {
+  switch (type?.toUpperCase()) {
+    case 'FACULTY':
+      return 'FACULTY';
+    case 'PARENT':
+      return 'PARENT';
+    case 'ANONYMOUS':
+      return 'ANONYMOUS';
+    case 'CITIZEN':
+    case 'WHISTLEBLOWER':
+      return 'CITIZEN';
+    case 'STUDENT':
+    default:
+      return 'STUDENT';
+  }
 }
 
 function mapBackendOverlapStatus(status: string): OverlapReviewStatus {
@@ -419,7 +476,12 @@ export const apiClient = {
     complaintNumber?: string;
     originalBureauRef?: string;
     institutionId: string;
-    bureauId: string;
+    permanentId?: string;
+    institutionName?: string;
+    state?: string;
+    district?: string;
+    bureauId?: string;
+    bureau?: string;
     assignedOfficerId?: string;
     subject: string;
     description: string;
@@ -443,6 +505,16 @@ export const apiClient = {
     const complaintNumber =
       payload.complaintNumber || `CMP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const originalBureauRef = payload.originalBureauRef || `BUR-${Date.now().toString().slice(-6)}`;
+    let bureauId = payload.bureauId;
+    if (!bureauId && payload.bureau) {
+      bureauId = mapBureauTypeToCode(payload.bureau);
+    } else if (bureauId && (bureauId.includes(' ') || bureauId.includes('&'))) {
+      bureauId = mapBureauTypeToCode(bureauId);
+    } else if (!bureauId) {
+      bureauId = 'APPROVAL_BUREAU';
+    }
+    const priority = mapFrontendPriorityToBackend(payload.priority);
+    const complainantType = mapComplainantTypeToBackend(payload.complainantType);
 
     const res = await fetchApi<{
       complaint: BackendComplaintRecord & {
@@ -466,16 +538,22 @@ export const apiClient = {
         complaintNumber,
         originalBureauRef,
         institutionId: payload.institutionId,
-        bureauId: payload.bureauId,
-        assignedOfficerId: payload.assignedOfficerId,
+        permanentId: payload.permanentId,
+        institutionName: payload.institutionName,
+        state: payload.state,
+        district: payload.district,
+        bureauId,
+        assignedOfficerId: payload.assignedOfficerId?.trim() || undefined,
         subject: payload.subject,
         description: payload.description,
         category: payload.category || 'OTHER',
-        priority: payload.priority || 'MEDIUM',
+        priority,
         status: payload.status || 'SUBMITTED',
-        incidentDate: payload.incidentDate,
-        complainantType: payload.complainantType || 'STUDENT',
-        complainantMaskedId: payload.complainantMaskedId,
+        incidentDate: payload.incidentDate?.trim() || undefined,
+        complainantType,
+        complainantMaskedId: payload.complainantMaskedId?.trim() || undefined,
+        allegations: payload.allegations || [],
+        evidence: payload.evidence || [],
       }),
     });
 

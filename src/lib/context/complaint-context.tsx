@@ -445,7 +445,12 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           // Prototype access: directly submits to live database without requiring an officer login
           const res = await apiClient.createComplaint({
             institutionId: input.institutionId,
-            bureauId: input.bureauId || currentOfficer?.bureauId || 'APPROVAL_BUREAU',
+            permanentId: input.permanentId,
+            institutionName: input.institutionName,
+            state: input.state,
+            district: input.district,
+            bureau: input.bureau,
+            bureauId: input.bureauId || currentOfficer?.bureau?.id || currentOfficer?.bureauId,
             assignedOfficerId: currentOfficer?.id,
             subject: input.subject,
             description: input.description,

@@ -103,7 +103,32 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
   const [selectedInstId, setSelectedInstId] = useState<string>(DEFAULT_INSTITUTIONS[0].id);
 
   // Form Fields
-  const [bureau, setBureau] = useState<BureauType>('Approval Bureau');
+  const [bureau, setBureau] = useState<BureauType>(() => {
+    const officerBureauName = currentOfficer?.bureau?.name || currentOfficer?.bureau;
+    if (officerBureauName) {
+      const matched = BUREAUS.find(
+        (b) => b.toLowerCase() === String(officerBureauName).toLowerCase()
+      );
+      if (matched) return matched;
+    }
+    return 'Approval Bureau';
+  });
+
+  // Adjust bureau when authenticated officer changes
+  const [prevOfficerId, setPrevOfficerId] = useState<string | undefined>(currentOfficer?.id);
+  if (currentOfficer?.id !== prevOfficerId) {
+    setPrevOfficerId(currentOfficer?.id);
+    const officerBureauName = currentOfficer?.bureau?.name || currentOfficer?.bureau;
+    if (officerBureauName) {
+      const matched = BUREAUS.find(
+        (b) => b.toLowerCase() === String(officerBureauName).toLowerCase()
+      );
+      if (matched) {
+        setBureau(matched);
+      }
+    }
+  }
+
   const [category, setCategory] = useState<string>('FEE_ANOMALY');
   const [priority, setPriority] = useState<ComplaintPriority>('Medium');
   const [complainantType, setComplainantType] = useState<
@@ -374,11 +399,11 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
         {formError && (
-          <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-start gap-2.5">
-            <IconAlertTriangle size={16} className="shrink-0 text-rose-600 mt-0.5" />
-            <div className="space-y-0.5">
-              <span className="font-bold">Required Information</span>
-              <p>{formError}</p>
+          <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-xs text-rose-300 flex items-start gap-3">
+            <IconAlertTriangle size={18} className="shrink-0 text-rose-400 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-bold text-rose-200 block text-sm">Submission / Validation Error</span>
+              <p className="leading-relaxed text-[11px] text-rose-300">{formError}</p>
             </div>
           </div>
         )}

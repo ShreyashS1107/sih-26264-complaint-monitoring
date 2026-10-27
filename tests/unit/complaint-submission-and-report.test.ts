@@ -141,4 +141,130 @@ describe('Complaint Submission & Overlap Scrutiny Engine', () => {
     expect(validateAttachment('archive.zip', 1024 * 50).valid).toBe(false);
     expect(validateAttachment('large_scan.pdf', 15 * 1024 * 1024).valid).toBe(false);
   });
+
+  it('validates and normalizes user form submissions with Title Case priority and complainantType', async () => {
+    const { createComplaintSchema } = await import('@/modules/complaints/schema');
+    const { mapBureauTypeToCode } = await import('@/lib/api-client');
+
+    const formSubmissionPayload = {
+      complaintNumber: 'CMP-2026-7788',
+      originalBureauRef: 'BUR-987654',
+      institutionId: 'inst-pune-8821',
+      permanentId: '1-10928374',
+      institutionName: 'Apex Institute of Advanced Technology',
+      bureauId: mapBureauTypeToCode('Approval Bureau'),
+      subject: 'Excessive development fee charged without receipt',
+      description: 'Second year computer engineering students charged 75,000 INR mandatory levy.',
+      category: 'UNAPPROVED_PROGRAM',
+      priority: 'Medium', // Title Case from form select
+      complainantType: 'Student', // Title Case from form select
+      complainantMaskedId: 'STU-***-9921',
+      allegations: ['Unauthorized capitation fee', 'Threat of hall ticket withholding'],
+      evidence: [
+        {
+          id: 'DOC-1234',
+          name: 'fee_receipt.pdf',
+          fileSize: '1.2 MB',
+          uploadDate: '2026-10-27',
+          category: 'Fee Receipt',
+        },
+      ],
+    };
+
+    const parsed = createComplaintSchema.safeParse(formSubmissionPayload);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.priority).toBe('MEDIUM');
+      expect(parsed.data.complainantType).toBe('STUDENT');
+      expect(parsed.data.bureauId).toBe('APPROVAL_BUREAU');
+      expect(parsed.data.evidence).toHaveLength(1);
+      expect(parsed.data.allegations).toHaveLength(2);
+    }
+  });
+
+  it('normalizes Whistleblower complainant affiliation to CITIZEN for database compatibility', async () => {
+    const { createComplaintSchema } = await import('@/modules/complaints/schema');
+
+    const payloadWithWhistleblower = {
+      complaintNumber: 'CMP-2026-1122',
+      originalBureauRef: 'BUR-112233',
+      institutionId: 'inst-delhi-4412',
+      bureauId: 'APPROVAL_BUREAU',
+      subject: 'Unapproved AI curriculum and laboratory deficit',
+      description: 'The college admitted students to an unapproved program without council sanction.',
+      category: 'UNAPPROVED_PROGRAM',
+      priority: 'High',
+      complainantType: 'Whistleblower',
+    };
+
+    const parsed = createComplaintSchema.safeParse(payloadWithWhistleblower);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.complainantType).toBe('CITIZEN');
+      expect(parsed.data.priority).toBe('HIGH');
+    }
+  });
+
+  it('safely handles empty strings for optional fields (incidentDate, complainantMaskedId)', async () => {
+    const { createComplaintSchema } = await import('@/modules/complaints/schema');
+
+    const payloadWithEmptyOptionals = {
+      complaintNumber: 'CMP-2026-3344',
+      originalBureauRef: 'BUR-334455',
+      institutionId: 'inst-delhi-4412',
+      bureauId: 'APPROVAL_BUREAU',
+      subject: 'Unapproved AI curriculum and laboratory deficit',
+      description: 'The college admitted students to an unapproved program without council sanction.',
+      category: 'OTHER',
+      priority: 'Low',
+      complainantType: 'Anonymous',
+      incidentDate: '',
+      complainantMaskedId: '',
+      assignedOfficerId: null,
+    };
+
+    const parsed = createComplaintSchema.safeParse(payloadWithEmptyOptionals);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.incidentDate).toBeUndefined();
+      expect(parsed.data.complainantMaskedId).toBeUndefined();
+      expect(parsed.data.assignedOfficerId).toBeUndefined();
+    }
+  });
+
+  it('correctly maps all frontend BureauType values to backend canonical codes', async () => {
+    const { mapBureauTypeToCode } = await import('@/lib/api-client');
+
+    expect(mapBureauTypeToCode('Approval Bureau')).toBe('APPROVAL_BUREAU');
+    expect(mapBureauTypeToCode('Student Grievance Cell')).toBe('STUDENT_GRIEVANCE_CELL');
+    expect(mapBureauTypeToCode('Anti-Ragging Cell')).toBe('ANTI_RAGGING_CELL');
+    expect(mapBureauTypeToCode('Faculty Development Cell')).toBe('FACULTY_GRIEVANCE_CELL');
+    expect(mapBureauTypeToCode('Finance & Legal Cell')).toBe('VIGILANCE_BUREAU');
+  });
+
+  it('rejects invalid inputs with clear field-level validation errors', async () => {
+    const { createComplaintSchema } = await import('@/modules/complaints/schema');
+
+    const invalidPayload = {
+      complaintNumber: 'INVALID_NUMBER',
+      originalBureauRef: '',
+      institutionId: '',
+      bureauId: '',
+      subject: 'No', // Too short (< 5 chars)
+      description: 'Short', // Too short (< 10 chars)
+      priority: 'INVALID_PRIORITY',
+    };
+
+    const parsed = createComplaintSchema.safeParse(invalidPayload);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const flattened = parsed.error.flatten();
+      expect(flattened.fieldErrors.complaintNumber).toBeDefined();
+      expect(flattened.fieldErrors.originalBureauRef).toBeDefined();
+      expect(flattened.fieldErrors.institutionId).toBeDefined();
+      expect(flattened.fieldErrors.subject).toBeDefined();
+      expect(flattened.fieldErrors.description).toBeDefined();
+      expect(flattened.fieldErrors.priority).toBeDefined();
+    }
+  });
 });

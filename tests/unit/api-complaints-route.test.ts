@@ -434,4 +434,90 @@ describe('POST /api/v1/complaints Route Handler', () => {
     expect(body.meta.requestId).toBeDefined();
     expect(overlapSpy).toHaveBeenCalledWith('cmp_created_002');
   });
+
+  it('should successfully process complaints submitted from form with Title Case priority, complainantType, and evidence exhibits', async () => {
+    vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(null);
+    vi.spyOn(db.institution, 'findUnique').mockResolvedValue({
+      id: 'inst-test-001',
+      name: 'Apex Institute of Advanced Technology',
+      permanentId: '1-10928374',
+    } as any);
+    vi.spyOn(db.bureau, 'findUnique').mockResolvedValue({
+      id: 'bureau-test-cuid',
+      code: 'APPROVAL_BUREAU',
+      name: 'Approval Bureau',
+    } as any);
+
+    const mockComplaint = {
+      id: 'cmp_created_003',
+      complaintNumber: 'CMP-2026-9999',
+      originalBureauRef: 'BUR-999999',
+      institutionId: 'inst-test-001',
+      bureauId: 'bureau-test-cuid',
+      subject: 'Program intake discrepancy and unauthorized fee hike',
+      description: 'The college charged 100,000 INR excess development fees without receipt.',
+      category: 'UNAPPROVED_PROGRAM',
+      priority: 'MEDIUM',
+      status: 'SUBMITTED',
+      complainantType: 'STUDENT',
+      createdAt: new Date().toISOString(),
+    };
+
+    vi.spyOn(db, '$transaction').mockImplementation(async (callback: any) => {
+      return callback({
+        complaint: {
+          create: vi.fn().mockResolvedValue(mockComplaint),
+        },
+        auditLog: {
+          create: vi.fn().mockResolvedValue({ id: 'aud_001' }),
+        },
+      });
+    });
+
+    vi.spyOn(overlapModule, 'analyzeAndPersistOverlaps').mockResolvedValue({
+      complaintId: 'cmp_created_003',
+      evaluatedPoolSize: 20,
+      detectedCandidateCount: 2,
+      candidates: [],
+    } as any);
+
+    const formPayload = {
+      complaintNumber: 'CMP-2026-9999',
+      originalBureauRef: 'BUR-999999',
+      institutionId: 'inst-test-001',
+      bureauId: 'APPROVAL_BUREAU',
+      subject: 'Program intake discrepancy and unauthorized fee hike',
+      description: 'The college charged 100,000 INR excess development fees without receipt.',
+      category: 'UNAPPROVED_PROGRAM',
+      priority: 'Medium', // Title Case
+      complainantType: 'Student', // Title Case
+      complainantMaskedId: '', // Empty optional string
+      incidentDate: '', // Empty optional string
+      evidence: [
+        {
+          id: 'DOC-1',
+          name: 'challan.pdf',
+          fileSize: '1.4 MB',
+          uploadDate: '2026-10-27',
+          category: 'Fee Receipt',
+        },
+      ],
+      allegations: ['Unauthorized capitation fees'],
+    };
+
+    const request = new Request('http://localhost:3000/api/v1/complaints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formPayload),
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.complaint.id).toBe('cmp_created_003');
+    expect(body.data.complaint.evidence).toHaveLength(1);
+    expect(body.data.complaint.allegations).toHaveLength(1);
+  });
 });
