@@ -147,7 +147,7 @@ export const OfficerLoginModal: React.FC = () => {
                   type="text"
                   value={badgeNumber}
                   onChange={(e) => setBadgeNumber(e.target.value)}
-                  placeholder="e.g. OFF-AICTE-001 (or leave blank)"
+                  placeholder="Enter AICTE ID"
                   className="w-full h-9.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 transition-all"
                 />
               </div>
@@ -164,7 +164,7 @@ export const OfficerLoginModal: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. officer@demo.aicte.internal"
+                  placeholder="Enter institutional email (optional)"
                   className="w-full h-9.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 transition-all"
                 />
               </div>

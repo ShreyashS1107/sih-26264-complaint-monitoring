@@ -127,16 +127,16 @@ function OverlapCompareContent() {
 
   if (!candidate) {
     return (
-      <div className="rounded-xl border border-[#E3DFD5] bg-white p-12 text-center shadow-xs">
-        <IconAlertTriangle size={36} className="mx-auto text-amber-600 mb-3" />
-        <h2 className="text-base font-bold text-[#0F172A]">Candidate Overlap Record Not Found</h2>
-        <p className="mt-1 text-xs text-[#5A6474]">
-          No pre-calculated algorithmic candidate match exists between <span className="font-mono font-bold text-[#0F172A]">{sourceId}</span> and <span className="font-mono font-bold text-[#0F172A]">{targetId}</span> in the review queue.
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-12 text-center shadow-xs">
+        <IconAlertTriangle size={36} className="mx-auto text-amber-500 mb-3" />
+        <h2 className="text-base font-bold text-[var(--text-primary)]">Candidate Overlap Record Not Found</h2>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          No pre-calculated algorithmic candidate match exists between <span className="font-mono font-bold text-[var(--text-primary)]">{sourceId}</span> and <span className="font-mono font-bold text-[var(--text-primary)]">{targetId}</span> in the review queue.
         </p>
         <div className="mt-6">
           <Link
             href="/overlap-review"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#315EFB] px-4 py-2 text-xs font-bold text-white hover:bg-[#254EDB] shadow-2xs transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-accent)] px-4 py-2 text-xs font-bold text-white hover:bg-[var(--primary-accent-hover)] shadow-[0_0_15px_var(--primary-accent-glow)] transition-colors"
           >
             <IconChevronLeft size={14} />
             <span>Return to Overlap Review Queue</span>

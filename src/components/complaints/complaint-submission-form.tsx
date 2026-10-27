@@ -291,13 +291,13 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
   };
 
   return (
-    <div className="max-w-4xl mx-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-sm overflow-hidden text-[#172033]">
+    <div className="max-w-4xl mx-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm overflow-hidden text-[var(--text-primary)] transition-colors">
       {/* Header Bar */}
-      <div className="bg-[#FAF8F4] border-b border-[#E5E7EB] px-6 py-5">
+      <div className="bg-[var(--bg-surface-subtle)] border-b border-[var(--border-subtle)] px-6 py-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#315EFB] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-2 py-0.5 rounded">
                 INTAKE &bull; STAGE {step} OF 3
               </span>
               {backendStatus === 'connected' ? (
@@ -317,10 +317,10 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                 </Badge>
               )}
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#172033] mt-1.5">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[var(--text-primary)] mt-1.5">
               Submit Institutional Grievance for Verification
             </h1>
-            <p className="text-xs text-[#5A6474] mt-0.5">
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
               Enter institution details, categorize the grievance, attach supporting evidence, and
               execute automated cross-bureau overlap analysis.
             </p>
@@ -328,13 +328,13 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
 
           {/* Officer Identity Status / Prototype Scrutiny Status */}
           <div className="text-left sm:text-right shrink-0">
-            <div className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-1.5 shadow-2xs">
+            <div className="inline-flex items-center gap-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] px-3 py-1.5 shadow-2xs">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <div className="text-left">
-                <span className="block text-xs font-bold text-[#172033] leading-none">
+                <span className="block text-xs font-bold text-[var(--text-primary)] leading-none">
                   {currentOfficer ? currentOfficer.name : 'Apex Scrutiny Reviewer'}
                 </span>
-                <span className="block text-[10px] text-[#697386] font-mono leading-none mt-0.5">
+                <span className="block text-[10px] text-[var(--text-muted)] font-mono leading-none mt-0.5">
                   {currentOfficer ? currentOfficer.badgeNumber : 'PROTOTYPE-ACCESS'}
                 </span>
               </div>
@@ -347,24 +347,24 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
           <button
             type="button"
             onClick={() => setStep(1)}
-            className={`h-1.5 rounded-full transition-all ${
-              step >= 1 ? 'bg-[#315EFB]' : 'bg-slate-200'
+            className={`h-1.5 rounded-full transition-colors ${
+              step >= 1 ? 'bg-[var(--primary-accent)]' : 'bg-[var(--border-subtle)]'
             }`}
             title="Step 1: Institution & Bureau"
           />
           <button
             type="button"
             onClick={() => validateStep1() && setStep(2)}
-            className={`h-1.5 rounded-full transition-all ${
-              step >= 2 ? 'bg-[#315EFB]' : 'bg-slate-200'
+            className={`h-1.5 rounded-full transition-colors ${
+              step >= 2 ? 'bg-[var(--primary-accent)]' : 'bg-[var(--border-subtle)]'
             }`}
             title="Step 2: Grievance & Allegations"
           />
           <button
             type="button"
             onClick={() => validateStep1() && validateStep2() && setStep(3)}
-            className={`h-1.5 rounded-full transition-all ${
-              step >= 3 ? 'bg-[#315EFB]' : 'bg-slate-200'
+            className={`h-1.5 rounded-full transition-colors ${
+              step >= 3 ? 'bg-[var(--primary-accent)]' : 'bg-[var(--border-subtle)]'
             }`}
             title="Step 3: Evidence & Verification"
           />
@@ -387,11 +387,11 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div>
-              <h2 className="text-sm font-bold text-[#172033] flex items-center gap-2">
-                <IconBuilding size={16} className="text-[#315EFB]" />
+              <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <IconBuilding size={16} className="text-[var(--primary-accent)]" />
                 <span>1. Select AICTE Affiliated Institution</span>
               </h2>
-              <p className="text-xs text-[#5A6474] mt-0.5">
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 Link this complaint to a recognized institution in the AICTE directory.
               </p>
             </div>
@@ -399,7 +399,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             <div>
               <label
                 htmlFor="inst-select"
-                className="block text-xs font-semibold text-[#172033] mb-1.5"
+                className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
               >
                 Affiliated Institution <span className="text-rose-500">*</span>
               </label>
@@ -407,7 +407,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                 id="inst-select"
                 value={selectedInstId}
                 onChange={(e) => setSelectedInstId(e.target.value)}
-                className="w-full h-11 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs font-medium text-[#172033] focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                className="w-full h-11 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs font-medium text-[var(--text-primary)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
               >
                 {institutions.map((inst) => (
                   <option key={inst.id} value={inst.id}>
@@ -418,14 +418,14 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             </div>
 
             {/* Selected Institution Profile Card */}
-            <div className="rounded-xl border border-[#E5E7EB] bg-[#FAF8F4] p-4 text-xs space-y-2">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4 text-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-[#172033]">{selectedInstitution.name}</span>
-                <span className="font-mono text-[11px] font-bold text-[#315EFB] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                <span className="font-bold text-[var(--text-primary)]">{selectedInstitution.name}</span>
+                <span className="font-mono text-[11px] font-bold text-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] border border-[var(--primary-accent)]/30 px-2 py-0.5 rounded">
                   Permanent ID: {selectedInstitution.permanentId}
                 </span>
               </div>
-              <div className="text-[#5A6474] text-[11px]">
+              <div className="text-[var(--text-secondary)] text-[11px]">
                 Location: {selectedInstitution.district}, {selectedInstitution.state} &bull;
                 Regulatory Status: Approved
               </div>
@@ -435,7 +435,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <div>
                 <label
                   htmlFor="bureau-select"
-                  className="block text-xs font-semibold text-[#172033] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
                 >
                   Originating Bureau / Cell <span className="text-rose-500">*</span>
                 </label>
@@ -443,7 +443,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                   id="bureau-select"
                   value={bureau}
                   onChange={(e) => setBureau(e.target.value as BureauType)}
-                  className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                  className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                 >
                   {BUREAUS.map((b) => (
                     <option key={b} value={b}>
@@ -456,7 +456,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <div>
                 <label
                   htmlFor="complainant-type-select"
-                  className="block text-xs font-semibold text-[#172033] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
                 >
                   Complainant Category
                 </label>
@@ -464,7 +464,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                   id="complainant-type-select"
                   value={complainantType}
                   onChange={(e) => setComplainantType(e.target.value as any)}
-                  className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                  className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                 >
                   {COMPLAINANT_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -481,7 +481,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                 onClick={() => {
                   if (validateStep1()) setStep(2);
                 }}
-                className="px-5 py-2.5 rounded-lg bg-[#315EFB] text-xs font-bold text-white hover:bg-[#254EDB] transition-colors shadow-2xs inline-flex items-center gap-1.5"
+                className="px-5 py-2.5 rounded-lg bg-[var(--primary-accent)] text-xs font-bold text-white hover:bg-[var(--primary-accent-hover)] transition-colors shadow-2xs inline-flex items-center gap-1.5 shadow-[0_0_12px_var(--primary-accent-glow)]"
               >
                 <span>Continue to Grievance Details</span>
                 <IconArrowRight size={13} />
@@ -494,11 +494,11 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
         {step === 2 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div>
-              <h2 className="text-sm font-bold text-[#172033] flex items-center gap-2">
-                <IconFileText size={16} className="text-[#315EFB]" />
+              <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <IconFileText size={16} className="text-[var(--primary-accent)]" />
                 <span>2. Grievance Details &amp; Specific Allegations</span>
               </h2>
-              <p className="text-xs text-[#5A6474] mt-0.5">
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 Clearly describe the complaint issue and itemize formal allegations for
                 verification.
               </p>
@@ -508,7 +508,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <div>
                 <label
                   htmlFor="cat-select"
-                  className="block text-xs font-semibold text-[#172033] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
                 >
                   Grievance Category <span className="text-rose-500">*</span>
                 </label>
@@ -516,7 +516,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                   id="cat-select"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                  className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>
@@ -529,7 +529,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <div>
                 <label
                   htmlFor="prio-select"
-                  className="block text-xs font-semibold text-[#172033] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
                 >
                   Priority Severity
                 </label>
@@ -537,7 +537,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                   id="prio-select"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as ComplaintPriority)}
-                  className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                  className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                 >
                   <option value="Low">Low (Routine Monitoring)</option>
                   <option value="Medium">Medium (Standard Scrutiny)</option>
@@ -551,7 +551,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <div>
                 <label
                   htmlFor="complainant-type-select"
-                  className="block text-xs font-semibold text-[#172033] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
                 >
                   Complainant Affiliation
                 </label>
@@ -564,7 +564,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                         'Student' | 'Faculty' | 'Parent' | 'Anonymous' | 'Whistleblower'
                     )
                   }
-                  className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                  className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                 >
                   <option value="Student">Enrolled Student</option>
                   <option value="Faculty">Faculty / Staff Member</option>
@@ -577,10 +577,10 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <div>
                 <label
                   htmlFor="complainant-id-input"
-                  className="block text-xs font-semibold text-[#172033] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
                 >
                   Masked Tracking / Reference ID{' '}
-                  <span className="text-[#8A94A6] font-normal">(Optional)</span>
+                  <span className="text-[var(--text-muted)] font-normal">(Optional)</span>
                 </label>
                 <input
                   id="complainant-id-input"
@@ -588,7 +588,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                   value={complainantMaskedId}
                   onChange={(e) => setComplainantMaskedId(e.target.value)}
                   placeholder="e.g. STU-***-8821 or Grievance Portal Token"
-                  className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] placeholder:text-slate-400 focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                  className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                 />
               </div>
             </div>
@@ -596,7 +596,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             <div>
               <label
                 htmlFor="subject-input"
-                className="block text-xs font-semibold text-[#172033] mb-1.5"
+                className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
               >
                 Grievance Title / Subject Headline <span className="text-rose-500">*</span>
               </label>
@@ -607,14 +607,14 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Unapproved Capitation Fee Mandated for B.Tech Admission Cycle 2026-27"
-                className="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] placeholder:text-slate-400 focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs font-medium"
+                className="w-full h-10 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs font-medium"
               />
             </div>
 
             <div>
               <label
                 htmlFor="desc-input"
-                className="block text-xs font-semibold text-[#172033] mb-1.5"
+                className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5"
               >
                 Detailed Narrative Description <span className="text-rose-500">*</span>
               </label>
@@ -625,20 +625,20 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="State the facts chronologically, including relevant dates, officials named, amounts demanded, or specific campus locations involved..."
-                className="w-full rounded-lg border border-[#E5E7EB] bg-white p-3 text-xs text-[#172033] placeholder:text-slate-400 focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs leading-relaxed"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs leading-relaxed"
               />
             </div>
 
             {/* Allegations List */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-[#172033]">
+                <label className="block text-xs font-semibold text-[var(--text-primary)]">
                   Specific Formal Allegations <span className="text-rose-500">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleAddAllegation}
-                  className="text-xs font-bold text-[#315EFB] hover:text-[#254EDB] transition-colors"
+                  className="text-xs font-bold text-[var(--primary-accent)] hover:text-[var(--primary-accent-hover)] transition-colors"
                 >
                   + Add Another Allegation
                 </button>
@@ -646,7 +646,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
 
               {allegations.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-[#697386] w-6 shrink-0 text-center">
+                  <span className="font-mono text-xs font-bold text-[var(--text-muted)] w-6 shrink-0 text-center">
                     {idx + 1}.
                   </span>
                   <input
@@ -654,13 +654,13 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                     value={item}
                     onChange={(e) => handleUpdateAllegation(idx, e.target.value)}
                     placeholder="e.g. Mandating ₹2,50,000 cash contribution without official fee receipt"
-                    className="flex-1 h-9 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#172033] placeholder:text-slate-400 focus:border-[#315EFB] focus:outline-hidden focus:ring-2 focus:ring-[#315EFB]/20 shadow-2xs"
+                    className="flex-1 h-9 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--primary-accent)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]/20 shadow-2xs"
                   />
                   {allegations.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveAllegation(idx)}
-                      className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                      className="p-2 text-[var(--text-muted)] hover:text-rose-500 transition-colors"
                       aria-label="Remove allegation"
                     >
                       <IconX size={14} />
@@ -670,11 +670,11 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               ))}
             </div>
 
-            <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+            <div className="pt-4 flex items-center justify-between border-t border-[var(--border-subtle)]">
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-semibold text-[#172033] hover:bg-slate-50 transition-colors shadow-2xs inline-flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors shadow-2xs inline-flex items-center gap-1.5"
               >
                 <IconChevronLeft size={13} />
                 <span>Back to Institution</span>
@@ -685,7 +685,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                 onClick={() => {
                   if (validateStep2()) setStep(3);
                 }}
-                className="px-5 py-2.5 rounded-lg bg-[#315EFB] text-xs font-bold text-white hover:bg-[#254EDB] transition-colors shadow-2xs inline-flex items-center gap-1.5"
+                className="px-5 py-2.5 rounded-lg bg-[var(--primary-accent)] text-xs font-bold text-white hover:bg-[var(--primary-accent-hover)] transition-colors shadow-2xs inline-flex items-center gap-1.5 shadow-[0_0_12px_var(--primary-accent-glow)]"
               >
                 <span>Continue to Evidence</span>
                 <IconArrowRight size={13} />
@@ -698,42 +698,42 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
         {step === 3 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div>
-              <h2 className="text-sm font-bold text-[#172033] flex items-center gap-2">
-                <IconUpload size={16} className="text-[#315EFB]" />
+              <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <IconUpload size={16} className="text-[var(--primary-accent)]" />
                 <span>3. Supporting Evidence &amp; Verification Execution</span>
               </h2>
-              <p className="text-xs text-[#5A6474] mt-0.5">
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 Attach verifiable exhibits (affidavits, fee challans, inspection notices) and
                 initiate automated cross-bureau overlap analysis.
               </p>
             </div>
 
             {/* Upload Area */}
-            <div className="rounded-xl border-2 border-dashed border-slate-200 bg-[#FAF8F4] p-6 text-center space-y-3">
+            <div className="rounded-xl border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-6 text-center space-y-3">
               <div className="flex justify-center">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#315EFB]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--primary-accent-subtle)] text-[var(--primary-accent)]">
                   <IconUpload size={22} />
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-bold text-[#172033]">
+                <p className="text-xs font-bold text-[var(--text-primary)]">
                   Select supporting evidentiary documents
                 </p>
-                <p className="text-[11px] text-[#697386] mt-0.5">
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                   PDF, DOCX, JPEG, or PNG up to 10 MB per file
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-[#697386]">
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)]">
                     Document Category:
                   </span>
                   <select
                     value={selectedDocCategory}
                     onChange={(e) => setSelectedDocCategory(e.target.value as any)}
-                    className="h-8 rounded-lg border border-[#D6CFC4] bg-white px-2.5 text-xs text-[#172033] font-semibold"
+                    className="h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 text-xs text-[var(--text-primary)] font-semibold"
                   >
                     <option value="Fee Receipt">Fee Receipt / Challan</option>
                     <option value="Affidavit">Notarized Affidavit</option>
@@ -743,7 +743,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                   </select>
                 </div>
 
-                <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-[#315EFB] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#254EDB] transition-colors shadow-2xs">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-accent)] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[var(--primary-accent-hover)] transition-colors shadow-2xs shadow-[0_0_12px_var(--primary-accent-glow)]">
                   <span>Choose Files</span>
                   <input
                     type="file"
@@ -757,10 +757,10 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             </div>
 
             {/* Storage Limitation Disclosure (Requirement 8) */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-xs text-[#5A6474] flex items-start gap-2.5">
-              <IconInfo size={16} className="text-[#315EFB] shrink-0 mt-0.5" />
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3.5 text-xs text-[var(--text-secondary)] flex items-start gap-2.5">
+              <IconInfo size={16} className="text-[var(--primary-accent)] shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed">
-                <strong className="text-[#172033]">Storage Architecture Disclosure:</strong>{' '}
+                <strong className="text-[var(--text-primary)]">Storage Architecture Disclosure:</strong>{' '}
                 Uploaded attachments are cataloged with genuine file metadata, category stamps, and
                 verification hashes. Permanent binary blob persistence is not configured on this
                 demonstration server; physical or verified digital files should be preserved in the
@@ -771,19 +771,19 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             {/* File List */}
             {evidenceFiles.length > 0 && (
               <div className="space-y-2">
-                <span className="text-xs font-bold text-[#172033] block">
+                <span className="text-xs font-bold text-[var(--text-primary)] block">
                   Logged Exhibits ({evidenceFiles.length})
                 </span>
-                <div className="rounded-xl border border-[#E5E7EB] bg-white divide-y divide-slate-100">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] divide-y divide-[var(--border-subtle)]">
                   {evidenceFiles.map((doc) => (
                     <div key={doc.id} className="p-3 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#315EFB]">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-accent-subtle)] text-[var(--primary-accent)]">
                           <IconFileText size={16} />
                         </div>
                         <div>
-                          <span className="font-semibold text-[#172033] block">{doc.name}</span>
-                          <span className="text-[11px] text-[#697386]">
+                          <span className="font-semibold text-[var(--text-primary)] block">{doc.name}</span>
+                          <span className="text-[11px] text-[var(--text-muted)]">
                             {doc.category} &bull; {doc.fileSize}
                           </span>
                         </div>
@@ -791,7 +791,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(doc.id)}
-                        className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                        className="text-[var(--text-muted)] hover:text-rose-500 transition-colors p-1"
                         aria-label="Remove file"
                       >
                         <IconX size={14} />
@@ -803,9 +803,9 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
             )}
 
             {/* Summary Review Card */}
-            <div className="rounded-xl border border-[#E5E7EB] bg-[#FAF8F4] p-4 text-xs space-y-2">
-              <span className="font-bold text-[#172033] block">Submission Summary</span>
-              <div className="grid grid-cols-2 gap-2 text-[#5A6474] text-[11px]">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4 text-xs space-y-2">
+              <span className="font-bold text-[var(--text-primary)] block">Submission Summary</span>
+              <div className="grid grid-cols-2 gap-2 text-[var(--text-secondary)] text-[11px]">
                 <div>
                   <strong>Target Institution:</strong> {selectedInstitution.name} (
                   {selectedInstitution.permanentId})
@@ -823,11 +823,11 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+            <div className="pt-4 flex items-center justify-between border-t border-[var(--border-subtle)]">
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-semibold text-[#172033] hover:bg-slate-50 transition-colors shadow-2xs inline-flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)] transition-colors shadow-2xs inline-flex items-center gap-1.5"
               >
                 <IconChevronLeft size={13} />
                 <span>Back to Details</span>
@@ -836,7 +836,7 @@ export const ComplaintSubmissionForm: React.FC<ComplaintSubmissionFormProps> = (
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-lg bg-[#315EFB] text-xs font-bold text-white hover:bg-[#254EDB] disabled:opacity-50 transition-colors shadow-md inline-flex items-center gap-2"
+                className="px-6 py-2.5 rounded-lg bg-[var(--primary-accent)] text-xs font-bold text-white hover:bg-[var(--primary-accent-hover)] disabled:opacity-50 transition-colors shadow-md inline-flex items-center gap-2 shadow-[0_0_15px_var(--primary-accent-glow)]"
               >
                 {isSubmitting ? (
                   <>

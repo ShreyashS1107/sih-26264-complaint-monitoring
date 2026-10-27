@@ -66,16 +66,16 @@ export const ComplaintDetailView: React.FC<ComplaintDetailViewProps> = ({ id }) 
   // If complaint is not found in the dataset
   if (!complaint) {
     return (
-      <div className="rounded-xl border border-[#E5E7EB] bg-white p-12 text-center shadow-xs">
-        <IconAlertTriangle size={36} className="mx-auto text-amber-600 mb-3" />
-        <h2 className="text-base font-bold text-[#172033]">Complaint Dossier Not Found</h2>
-        <p className="mt-1 text-xs text-[#697386]">
-          No institutional record was found with ID <span className="font-mono font-semibold text-[#172033]">{id}</span>.
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-12 text-center shadow-xs">
+        <IconAlertTriangle size={36} className="mx-auto text-amber-500 mb-3" />
+        <h2 className="text-base font-bold text-[var(--text-primary)]">Complaint Dossier Not Found</h2>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          No institutional record was found with ID <span className="font-mono font-semibold text-[var(--text-primary)]">{id}</span>.
         </p>
         <div className="mt-6">
           <Link
             href="/complaints"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#315EFB] px-4 py-2 text-xs font-semibold text-white hover:bg-[#254EDB] transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-accent)] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-colors shadow-2xs"
           >
             <IconChevronLeft size={14} />
             <span>Return to Complaint Registry</span>

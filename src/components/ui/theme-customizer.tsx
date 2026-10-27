@@ -33,24 +33,29 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
 
   const presetList = Object.values(ACCENT_PRESETS);
 
-  // Avoid SSR hydration layout flash
+  // Avoid SSR hydration layout flash with exact matching placeholder dimensions
   if (!isMounted) {
     return (
-      <div className={`flex items-center gap-2 ${className}`}>
-        <div className="h-8 w-8 rounded-lg bg-slate-800/40 border border-slate-700/50" />
+      <div className={`relative flex items-center gap-1.5 sm:gap-2 shrink-0 ${className}`}>
+        <div className="h-8.5 w-8.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] shrink-0" />
+        <div
+          className={`h-8.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] shrink-0 ${
+            compact ? 'w-8.5' : 'w-8.5 md:w-32'
+          }`}
+        />
       </div>
     );
   }
 
   return (
-    <div className={`relative flex items-center gap-1.5 sm:gap-2 ${className}`} ref={popoverRef}>
+    <div className={`relative flex items-center gap-1.5 sm:gap-2 shrink-0 ${className}`} ref={popoverRef}>
       {/* 1. Dark / Light Mode Toggle Button */}
       <button
         type="button"
         onClick={toggleThemeMode}
         aria-label={`Switch to ${themeMode === 'dark' ? 'Light' : 'Dark'} mode`}
         title={`Current mode: ${themeMode === 'dark' ? 'Dark' : 'Light'}. Click to toggle.`}
-        className="group relative flex h-8.5 w-8.5 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] shadow-2xs transition-all focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]"
+        className="group relative flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-[var(--text-primary)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] shadow-2xs transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]"
       >
         <span className="sr-only">Toggle Dark and Light theme</span>
         <motion.div
@@ -69,25 +74,34 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
         </motion.div>
       </button>
 
-      {/* 2. Accent Color Palette Trigger */}
+      {/* 2. Accent Color Palette Trigger (Fixed Width to prevent layout shifts) */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label="Customize accent color theme"
         title={`Active accent: ${activeConfig.name}. Click to change theme accent.`}
-        className="group relative flex h-8.5 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-2.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] shadow-2xs transition-all focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)]"
+        className={`group relative flex h-8.5 shrink-0 items-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary-accent)] shadow-2xs transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-[var(--primary-accent)] ${
+          compact ? 'w-8.5 justify-center px-0' : 'w-8.5 md:w-32 justify-between px-2.5'
+        }`}
       >
-        <div
-          className="h-3.5 w-3.5 rounded-full shadow-[0_0_8px_var(--primary-accent-glow)] transition-transform group-hover:scale-110"
-          style={{ backgroundColor: activeConfig.primary }}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div
+            className="h-3.5 w-3.5 shrink-0 rounded-full shadow-[0_0_8px_var(--primary-accent-glow)] transition-transform group-hover:scale-110"
+            style={{ backgroundColor: activeConfig.primary }}
+          />
+          {!compact && (
+            <span className="hidden md:inline-block truncate text-[11px] font-mono tracking-tight text-[var(--text-secondary)]">
+              {activeConfig.name}
+            </span>
+          )}
+        </div>
+        <IconPalette
+          size={14}
+          className={`${
+            compact ? 'hidden' : 'hidden md:block'
+          } shrink-0 text-[var(--text-secondary)] group-hover:text-[var(--primary-accent)] transition-colors`}
         />
-        {!compact && (
-          <span className="hidden md:inline-block text-[11px] font-mono tracking-tight text-[var(--text-secondary)]">
-            {activeConfig.name}
-          </span>
-        )}
-        <IconPalette size={14} className="text-[var(--text-secondary)] group-hover:text-[var(--primary-accent)] transition-colors" />
       </button>
 
       {/* 3. Dropdown Popover */}
@@ -130,7 +144,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
                       onClick={() => {
                         setAccent(preset.id as AccentPreset);
                       }}
-                      className={`group relative flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition-all ${
+                      className={`group relative flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition-colors duration-150 ${
                         isSelected
                           ? 'border-[var(--primary-accent)] bg-[var(--primary-accent-subtle)] shadow-[0_0_12px_var(--primary-accent-glow)]'
                           : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
@@ -189,7 +203,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
                 <button
                   type="button"
                   onClick={() => toggleThemeMode()}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors duration-150 ${
                     themeMode === 'dark'
                       ? 'bg-[var(--primary-accent)] text-white shadow-xs'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -201,7 +215,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ compact = fals
                 <button
                   type="button"
                   onClick={() => toggleThemeMode()}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors duration-150 ${
                     themeMode === 'light'
                       ? 'bg-[var(--primary-accent)] text-white shadow-xs'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
