@@ -264,28 +264,62 @@ export async function POST(request: Request) {
     }
 
     // 5. Validate referenced relations (institution, bureau, optional assigned officer)
-    const isPermanentId = Boolean(input.permanentId) || input.institutionId.startsWith('1-');
+    let institution = null;
+    const lookupPermanentId =
+      input.permanentId || (input.institutionId.startsWith('1-') ? input.institutionId : null);
 
-    const [institution, bureau] = await Promise.all([
-      isPermanentId
-        ? db.institution.findUnique({
-            where: { permanentId: input.permanentId || input.institutionId },
-            select: { id: true, name: true, permanentId: true },
-          })
-        : db.institution.findUnique({
-            where: { id: input.institutionId },
-            select: { id: true, name: true, permanentId: true },
-          }),
-      isBureauCode
-        ? db.bureau.findUnique({
-            where: { code: input.bureauId },
-            select: { id: true, code: true },
-          })
-        : db.bureau.findUnique({
-            where: { id: input.bureauId },
-            select: { id: true, code: true },
-          }),
-    ]);
+    if (lookupPermanentId) {
+      institution = await db.institution.findUnique({
+        where: { permanentId: lookupPermanentId },
+        select: { id: true, name: true, permanentId: true },
+      });
+    }
+
+    if (!institution && input.institutionId) {
+      institution = await db.institution.findUnique({
+        where: { id: input.institutionId },
+        select: { id: true, name: true, permanentId: true },
+      });
+    }
+
+    if (!institution && !lookupPermanentId && input.institutionId) {
+      institution = await db.institution.findUnique({
+        where: { permanentId: input.institutionId },
+        select: { id: true, name: true, permanentId: true },
+      });
+    }
+
+    if (!institution && input.institutionName) {
+      institution = await db.institution.findFirst({
+        where: { name: { equals: input.institutionName.trim(), mode: 'insensitive' } },
+        select: { id: true, name: true, permanentId: true },
+      });
+    }
+
+    let bureau = null;
+    if (isBureauCode) {
+      bureau = await db.bureau.findUnique({
+        where: { code: input.bureauId },
+        select: { id: true, code: true },
+      });
+    } else {
+      bureau = await db.bureau.findUnique({
+        where: { id: input.bureauId },
+        select: { id: true, code: true },
+      });
+    }
+
+    if (!bureau) {
+      bureau = await db.bureau.findFirst({
+        where: {
+          OR: [
+            { code: { equals: input.bureauId, mode: 'insensitive' } },
+            { name: { equals: input.bureauId, mode: 'insensitive' } },
+          ],
+        },
+        select: { id: true, code: true },
+      });
+    }
 
     if (!institution) {
       return apiError(

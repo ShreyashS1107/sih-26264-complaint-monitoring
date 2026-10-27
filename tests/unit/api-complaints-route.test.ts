@@ -222,6 +222,7 @@ describe('POST /api/v1/complaints Route Handler', () => {
   it('should return 404 when referenced institution is not found', async () => {
     vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
     vi.spyOn(db.institution, 'findUnique').mockResolvedValue(null);
+    vi.spyOn(db.institution, 'findFirst').mockResolvedValue(null);
     vi.spyOn(db.bureau, 'findUnique').mockResolvedValue({ id: 'bureau-test-001' } as any);
 
     const request = new Request('http://localhost:3000/api/v1/complaints', {
@@ -242,6 +243,7 @@ describe('POST /api/v1/complaints Route Handler', () => {
     vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
     vi.spyOn(db.institution, 'findUnique').mockResolvedValue({ id: 'inst-test-001' } as any);
     vi.spyOn(db.bureau, 'findUnique').mockResolvedValue(null);
+    vi.spyOn(db.bureau, 'findFirst').mockResolvedValue(null);
 
     const request = new Request('http://localhost:3000/api/v1/complaints', {
       method: 'POST',
@@ -280,6 +282,94 @@ describe('POST /api/v1/complaints Route Handler', () => {
     expect(body.error.message).toContain(
       "Assigned officer with ID 'officer-missing-999' was not found"
     );
+  });
+
+  it('should resolve institution by permanentId fallback when institutionId is synthetic AICTE-INST-8821', async () => {
+    vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+    const instSpy = vi.spyOn(db.institution, 'findUnique').mockImplementation(((args: any) => {
+      if (args.where?.permanentId === '1-10928374') {
+        return Promise.resolve({ id: 'real-db-cuid-001', permanentId: '1-10928374', name: 'Apex Institute' } as any);
+      }
+      return Promise.resolve(null);
+    }) as any);
+    vi.spyOn(db.bureau, 'findUnique').mockResolvedValue({ id: 'bureau-test-001' } as any);
+    vi.spyOn(db, '$transaction').mockResolvedValue({
+      id: 'cmp_created_001',
+      complaintNumber: 'CMP-2026-0009',
+      institutionId: 'real-db-cuid-001',
+      bureauId: 'bureau-test-001',
+      institution: { id: 'real-db-cuid-001', name: 'Apex Institute', permanentId: '1-10928374' },
+      bureau: { id: 'bureau-test-001', code: 'APPROVAL_BUREAU', name: 'Approval Bureau' },
+      assignedOfficer: null,
+      _count: { primaryOverlapCandidates: 0, secondaryOverlapCandidates: 0 },
+    } as any);
+    vi.spyOn(overlapModule, 'analyzeAndPersistOverlaps').mockResolvedValue({
+      evaluatedPoolSize: 0,
+      detectedCandidateCount: 0,
+      candidates: [],
+    } as any);
+
+    const request = new Request('http://localhost:3000/api/v1/complaints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...validPayload,
+        institutionId: 'AICTE-INST-8821',
+        permanentId: '1-10928374',
+        institutionName: 'Apex Institute of Advanced Technology',
+      }),
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(instSpy).toHaveBeenCalled();
+  });
+
+  it('should resolve institution by institutionName fallback when IDs do not match', async () => {
+    vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+    vi.spyOn(db.institution, 'findUnique').mockResolvedValue(null);
+    const nameSpy = vi.spyOn(db.institution, 'findFirst').mockResolvedValue({
+      id: 'real-db-cuid-002',
+      permanentId: '1-20948571',
+      name: 'Delhi NCR Technical Institute',
+    } as any);
+    vi.spyOn(db.bureau, 'findUnique').mockResolvedValue({ id: 'bureau-test-001' } as any);
+    vi.spyOn(db, '$transaction').mockResolvedValue({
+      id: 'cmp_created_002',
+      complaintNumber: 'CMP-2026-0009',
+      institutionId: 'real-db-cuid-002',
+      bureauId: 'bureau-test-001',
+      institution: { id: 'real-db-cuid-002', name: 'Delhi NCR Technical Institute', permanentId: '1-20948571' },
+      bureau: { id: 'bureau-test-001', code: 'APPROVAL_BUREAU', name: 'Approval Bureau' },
+      assignedOfficer: null,
+      _count: { primaryOverlapCandidates: 0, secondaryOverlapCandidates: 0 },
+    } as any);
+    vi.spyOn(overlapModule, 'analyzeAndPersistOverlaps').mockResolvedValue({
+      evaluatedPoolSize: 0,
+      detectedCandidateCount: 0,
+      candidates: [],
+    } as any);
+
+    const request = new Request('http://localhost:3000/api/v1/complaints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...validPayload,
+        institutionId: 'UNKNOWN-ID',
+        permanentId: '1-99999999',
+        institutionName: 'Delhi NCR Technical Institute',
+      }),
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(nameSpy).toHaveBeenCalled();
   });
 
   // 5. Conflict handling (P2002)

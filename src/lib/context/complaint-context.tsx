@@ -150,12 +150,12 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ]);
 
         let hasLiveComplaints = false;
-        if (complaintsRes.status === 'fulfilled' && complaintsRes.value.complaints.length > 0) {
+        if (complaintsRes.status === 'fulfilled') {
           setComplaints(complaintsRes.value.complaints);
-          hasLiveComplaints = true;
+          hasLiveComplaints = complaintsRes.value.complaints.length > 0;
         }
 
-        if (overlapsRes.status === 'fulfilled' && overlapsRes.value.candidates.length > 0) {
+        if (overlapsRes.status === 'fulfilled') {
           setOverlaps(overlapsRes.value.candidates);
         }
 
@@ -163,11 +163,11 @@ export const ComplaintProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setDashboardSummary(summaryRes.value);
         }
 
-        if (auditRes.status === 'fulfilled' && auditRes.value.logs.length > 0) {
+        if (auditRes.status === 'fulfilled') {
           setAuditLogs(auditRes.value.logs);
         }
 
-        setDataSource(hasLiveComplaints ? 'backend' : 'local-seed');
+        setDataSource(hasLiveComplaints ? 'backend' : 'backend');
         setLastSyncedAt(new Date().toLocaleTimeString());
       } else {
         setBackendStatus('offline');

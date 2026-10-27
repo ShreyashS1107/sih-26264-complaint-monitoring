@@ -21,6 +21,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:provision-officers": "node --experimental-strip-types scripts/provision-demo-officers.ts",
+    "db:inspect": "node --experimental-strip-types scripts/safe-db-inspect.ts",
+    "db:seed-baseline": "node --experimental-strip-types scripts/seed-production-baseline.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

@@ -420,6 +420,63 @@ describe('Overlap Review Routes (/api/v1/overlap-candidates)', () => {
       expect(body.data.candidate.reviewStatus).toBe('DISMISSED_INDEPENDENT');
     });
 
+    it('should support demo ID OVL-2026-03 mapped to underlying complaints AICTE-2026-8405 and AICTE-2026-8406', async () => {
+      vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
+      vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue(null);
+      const findFirstSpy = vi.spyOn(db.overlapCandidate, 'findFirst').mockResolvedValue({
+        id: 'real_cuid_ovl_03',
+        primaryComplaintId: 'cmp_8405',
+        candidateComplaintId: 'cmp_8406',
+        primaryComplaint: { id: 'cmp_8405', complaintNumber: 'AICTE-2026-8405', bureauId: 'bureau-test-001' },
+        candidateComplaint: { id: 'cmp_8406', complaintNumber: 'AICTE-2026-8406', bureauId: 'bureau_vigilance' },
+      } as any);
+
+      const mockUpdated = {
+        id: 'real_cuid_ovl_03',
+        reviewStatus: 'CONFIRMED_OVERLAP',
+        reviewNotes: 'Critical cross-bureau overlap confirmed between anti-ragging and vigilance.',
+        reviewedById: mockOfficer.id,
+        reviewedAt: new Date(),
+      };
+
+      vi.spyOn(db, '$transaction').mockImplementation(async (callback: any) => {
+        return callback({
+          overlapCandidate: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+          },
+          caseAction: {
+            createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          },
+          auditLog: {
+            create: vi.fn().mockResolvedValue({ id: 'aud_review_ovl_03' }),
+          },
+        });
+      });
+
+      const request = new Request(
+        'http://localhost:3000/api/v1/overlap-candidates/OVL-2026-03/review',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            verdict: 'Linked',
+            rationale: 'Critical cross-bureau overlap confirmed between anti-ragging and vigilance.',
+            institutionalDirective: 'Issue joint show cause notice',
+          }),
+        }
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({ id: 'OVL-2026-03' }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.candidate.reviewStatus).toBe('CONFIRMED_OVERLAP');
+      expect(findFirstSpy).toHaveBeenCalled();
+    });
+
     it('should return 400 when mandatory rationale / notes is missing or too short', async () => {
       vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(mockOfficer);
       vi.spyOn(db.overlapCandidate, 'findUnique').mockResolvedValue(sampleCandidate as any);
