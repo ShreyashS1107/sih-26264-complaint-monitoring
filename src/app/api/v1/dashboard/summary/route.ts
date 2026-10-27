@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess } from '@/lib/api-response';
+import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
 
 /**
  * GET /api/v1/dashboard/summary
@@ -129,6 +129,7 @@ export async function GET() {
       topInstitutions: formattedTopInstitutions,
     });
   } catch (_error: unknown) {
+    logServerError('GET /api/v1/dashboard/summary', _error);
     return apiError(
       'INTERNAL_SERVER_ERROR',
       'An unexpected error occurred while generating dashboard metrics.',

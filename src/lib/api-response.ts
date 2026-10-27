@@ -155,3 +155,32 @@ export function apiError(
     headers: options.headers,
   });
 }
+
+/**
+ * Safely logs server-side exceptions without exposing connection strings,
+ * credentials, authentication tokens, or personal complainant identifiers.
+ */
+export function logServerError(context: string, error: unknown): void {
+  const errObj = error instanceof Error ? error : new Error(String(error));
+  const rawMsg = errObj.message || String(error);
+
+  // Redact potential connection strings (e.g. postgresql://user:pass@host:port/db)
+  const safeMsg = rawMsg
+    .replace(/postgres(ql)?:\/\/[^\s"'`]+/gi, '[DATABASE_URL_REDACTED]')
+    .replace(/(password|passwd|pwd|secret|token|apiKey|api_key)[=:][^\s&,;'"]+/gi, '$1=[REDACTED]')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer [REDACTED]')
+    .replace(/eyJ[A-Za-z0-9-_]+\.eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]+/g, '[JWT_REDACTED]')
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL_REDACTED]')
+    .replace(/\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[PHONE_REDACTED]');
+
+  const prismaCode =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? (error as { code: string }).code
+      : undefined;
+
+  console.error(`[SERVER_ERROR] ${context}`, {
+    name: errObj.name,
+    code: prismaCode,
+    message: safeMsg,
+  });
+}

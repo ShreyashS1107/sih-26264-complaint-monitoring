@@ -520,4 +520,32 @@ describe('POST /api/v1/complaints Route Handler', () => {
     expect(body.data.complaint.evidence).toHaveLength(1);
     expect(body.data.complaint.allegations).toHaveLength(1);
   });
+
+  it('should safely log and return 500 when database table lookup fails due to unmigrated schema or connection failure', async () => {
+    vi.spyOn(authModule, 'resolveAuthenticatedOfficer').mockResolvedValue(null);
+    vi.spyOn(db.institution, 'findUnique').mockRejectedValue(
+      new Error('relation "Institution" does not exist in schema public')
+    );
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const request = new Request('http://localhost:3000/api/v1/complaints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validPayload),
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(body.error.message).toContain('unexpected error occurred while processing the request');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[SERVER_ERROR] POST /api/v1/complaints'),
+      expect.objectContaining({
+        message: expect.stringContaining('relation "Institution" does not exist'),
+      })
+    );
+  });
 });

@@ -1,5 +1,5 @@
 import { db } from '@/server/db';
-import { apiError, apiSuccess } from '@/lib/api-response';
+import { apiError, apiSuccess, logServerError } from '@/lib/api-response';
 import { resolveAuthenticatedOfficer } from '@/lib/auth';
 import { checkPrototypeMutationAccess, PROTOTYPE_ACTOR_ROLE } from '@/lib/prototype-access';
 import { createAuditLog } from '@/modules/audit/service';
@@ -163,6 +163,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (_error: unknown) {
+    logServerError('GET /api/v1/complaints', _error);
     return apiError(
       'INTERNAL_SERVER_ERROR',
       'An unexpected error occurred while retrieving complaints.',
@@ -287,37 +288,7 @@ export async function POST(request: Request) {
           }),
     ]);
 
-    let finalInstitution = institution;
-    if (
-      !finalInstitution &&
-      (input.permanentId || input.institutionName) &&
-      process.env.NODE_ENV !== 'test'
-    ) {
-      const permId =
-        input.permanentId ||
-        (input.institutionId.startsWith('1-')
-          ? input.institutionId
-          : `1-${Math.floor(10000000 + Math.random() * 90000000)}`);
-      try {
-        finalInstitution = await db.institution.upsert({
-          where: { permanentId: permId },
-          update: {},
-          create: {
-            permanentId: permId,
-            name: input.institutionName || 'AICTE Affiliated Institution',
-            state: input.state || 'National',
-            district: input.district || 'Central',
-            institutionType: 'ENGINEERING_TECHNOLOGY',
-            approvalStatus: 'APPROVED',
-          },
-          select: { id: true, name: true, permanentId: true },
-        });
-      } catch {
-        // Fall back to 404 below
-      }
-    }
-
-    if (!finalInstitution) {
+    if (!institution) {
       return apiError(
         'NOT_FOUND',
         `Institution with ID '${input.institutionId}' was not found.`,
@@ -353,7 +324,7 @@ export async function POST(request: Request) {
           data: {
             complaintNumber: input.complaintNumber,
             originalBureauRef: input.originalBureauRef,
-            institutionId: finalInstitution.id,
+            institutionId: institution.id,
             bureauId: bureau.id,
             assignedOfficerId: input.assignedOfficerId ?? null,
             subject: input.subject,
@@ -404,6 +375,7 @@ export async function POST(request: Request) {
         return complaint;
       });
     } catch (txError: unknown) {
+      logServerError('POST /api/v1/complaints:transaction', txError);
       if (
         typeof txError === 'object' &&
         txError !== null &&
@@ -429,6 +401,7 @@ export async function POST(request: Request) {
     try {
       overlapResult = await analyzeAndPersistOverlaps(createdComplaint.id);
     } catch (analysisError: unknown) {
+      logServerError('POST /api/v1/complaints:overlap_analysis', analysisError);
       try {
         await createAuditLog({
           entityType: 'COMPLAINT',
@@ -480,6 +453,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (_error: unknown) {
+    logServerError('POST /api/v1/complaints', _error);
     return apiError(
       'INTERNAL_SERVER_ERROR',
       'An unexpected error occurred while processing the request.',
